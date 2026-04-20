@@ -71,3 +71,49 @@ clean: ## Remove all generated/cache artifacts
 	find . -type d -name "dist"         -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "*.egg-info"   -exec rm -rf {} + 2>/dev/null || true
 	@echo "Clean complete."
+
+# ---------------------------------------------------------------------------
+# Infrastructure (Terraform)
+# ---------------------------------------------------------------------------
+TF_DIR      := infra
+DEMO_DIR    := infra/demo
+TF_VARS     ?=                          # e.g. TF_VARS="-var='environment=prod'"
+
+.PHONY: tf-init
+tf-init: ## Init Terraform (agent infra)
+	terraform -chdir=$(TF_DIR) init
+
+.PHONY: tf-plan
+tf-plan: ## Plan agent infra (shows what will change — no resources created)
+	terraform -chdir=$(TF_DIR) plan $(TF_VARS)
+
+.PHONY: tf-apply
+tf-apply: ## Apply agent infra (requires manual approval unless TF_AUTO_APPROVE=1)
+	@if [ "$(TF_AUTO_APPROVE)" = "1" ]; then \
+		terraform -chdir=$(TF_DIR) apply -auto-approve $(TF_VARS); \
+	else \
+		terraform -chdir=$(TF_DIR) apply $(TF_VARS); \
+	fi
+
+.PHONY: tf-destroy
+tf-destroy: ## Destroy agent infra (requires manual confirmation)
+	terraform -chdir=$(TF_DIR) destroy $(TF_VARS)
+
+.PHONY: tf-fmt
+tf-fmt: ## Format all Terraform files in infra/ (recursive)
+	terraform fmt -recursive $(TF_DIR)
+
+.PHONY: seed-demo
+seed-demo: ## Deploy demo leak resources (independent — safe to run alongside agent infra)
+	@echo "Initialising demo Terraform root..."
+	terraform -chdir=$(DEMO_DIR) init
+	@echo "Applying seed_leaks resources..."
+	terraform -chdir=$(DEMO_DIR) apply $(TF_VARS)
+	@echo ""
+	@echo "Demo leaks deployed. Run 'make cleanup-demo' to destroy them after the demo."
+
+.PHONY: cleanup-demo
+cleanup-demo: ## Destroy demo leak resources (leaves agent infra untouched)
+	@echo "Destroying seed_leaks resources..."
+	terraform -chdir=$(DEMO_DIR) destroy $(TF_VARS)
+	@echo "Demo resources cleaned up."

@@ -84,7 +84,7 @@ severity, estimated monthly impact in USD, remediation command/IaC, and LLM-gene
 | Agent runtime    | AWS Lambda (Python 3.12)            |
 | Orchestration    | LangGraph StateGraph                |
 | LLM              | Amazon Bedrock — Claude Sonnet 4.5  |
-| Tool protocol    | MCP (Model Context Protocol)        |
+| Tool protocol    | In-process tools (`agent/tools/`) + MCP wrappers for demo |
 | AWS SDK          | boto3 + aws-lambda-powertools       |
 | Data validation  | Pydantic v2 + pydantic-settings     |
 | Persistence      | DynamoDB                            |
@@ -98,10 +98,29 @@ severity, estimated monthly impact in USD, remediation command/IaC, and LLM-gene
 
 ## Quickstart
 
-> Coming soon after Phase 1 (Terraform infrastructure base).
+```bash
+# 1. Clone and install deps
+git clone https://github.com/diegosandoval/devops_agent.git
+cd devops_agent
+make install
 
-Full setup instructions including `terraform apply` and `make deploy` will be documented in
-`docs/SETUP.md` once the infrastructure module is complete.
+# 2. Copy and fill env vars
+cp .env.example .env
+
+# 3. Deploy agent infrastructure
+cd infra && terraform init && terraform apply
+
+# 4. (Optional) Seed demo leak resources for testing
+make seed-demo
+
+# 5. Run agent locally
+python scripts/run_local.py
+
+# 6. Clean up demo leaks
+make cleanup-demo
+```
+
+> Full step-by-step guide (AWS credentials, SSM secrets, Bedrock access): `docs/SETUP.md` — coming in Phase 7.
 
 ---
 
@@ -110,19 +129,31 @@ Full setup instructions including `terraform apply` and `make deploy` will be do
 ```
 .
 ├── src/
-│   ├── agent/           # LangGraph graph, nodes, prompts, Pydantic models
-│   ├── mcp_servers/     # MCP server implementations (Cost Explorer, CloudWatch, …)
-│   ├── common/          # Shared utilities: Bedrock client, AWS factories, config
-│   └── notifications/   # Slack formatter, DynamoDB writer
+│   ├── agent/
+│   │   ├── tools/       # In-process tool functions (boto3 wrappers, Bedrock schemas)
+│   │   ├── nodes/       # LangGraph nodes: plan, gather, analyze, recommend
+│   │   ├── prompts/     # System + node prompts as versioned .md files
+│   │   ├── models/      # Pydantic models: Finding, Recommendation, Investigation
+│   │   ├── guardrails.py  # Iteration / token / cost limits per investigation run
+│   │   └── graph.py     # LangGraph StateGraph definition
+│   ├── mcp_servers/     # Standalone MCP wrappers for demo/CLI use
+│   ├── common/
+│   │   ├── config.py    # Pydantic-settings config (env vars)
+│   │   └── secrets.py   # SSM Parameter Store fetcher (secrets never in env)
+│   └── notifications/   # Slack Block Kit formatter, DynamoDB writer
 ├── tests/
-│   ├── unit/            # Fully mocked unit tests
-│   ├── integration/     # moto-backed integration tests
+│   ├── unit/            # Fully mocked — no external calls
+│   ├── integration/     # moto-backed AWS, VCR for Bedrock
 │   └── fixtures/        # JSON response fixtures
-├── infra/               # Terraform modules
+├── evals/               # False-positive measurement harness (Phase 4)
+├── infra/               # Agent Terraform root (storage, lambda, eventbridge, SNS)
+│   ├── demo/            # Independent Terraform root — seed_leaks only
+│   └── modules/         # Reusable modules (storage, agent_lambda, notifications, …)
+├── docs/
+│   └── ADR/             # Architecture Decision Records (001-MCP, 002-DynamoDB, 003-Lambda)
 ├── scripts/             # Local runner, demo seeding, report generator
-├── docs/                # Architecture, setup, demo script, comparison
-├── pyproject.toml       # Build system, dependencies, tool config
-├── Makefile             # Developer workflow targets
+├── pyproject.toml       # Build system, dependencies, ruff + mypy config
+├── Makefile             # Developer + infra workflow targets
 ├── PLAN.md              # Master build plan (source of truth for Claude Code)
 └── CLAUDE.md            # Conventions and instructions for Claude Code
 ```
@@ -132,23 +163,20 @@ Full setup instructions including `terraform apply` and `make deploy` will be do
 ## Development
 
 ```bash
-# Install dependencies
-make install
+make install       # Install all dependencies (uv or pip fallback)
+make lint          # ruff check + ruff format --check
+make format        # Auto-fix formatting and lint issues
+make typecheck     # mypy strict
+make test          # Unit tests only (fast, no AWS calls)
+make test-all      # Full suite with coverage report
 
-# Lint and format check
-make lint
-
-# Auto-format
-make format
-
-# Type check
-make typecheck
-
-# Run unit tests
-make test
-
-# Run all tests with coverage
-make test-all
+# Infra
+make tf-init       # terraform init (agent infra)
+make tf-plan       # terraform plan
+make tf-apply      # terraform apply
+make tf-destroy    # terraform destroy
+make seed-demo     # Deploy intentional leak resources for demo
+make cleanup-demo  # Destroy demo leak resources
 ```
 
 ---

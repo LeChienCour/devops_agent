@@ -83,7 +83,7 @@ Un sistema serverless, low-cost (<$10 USD/mes en operación de demo), reproducib
 | Runtime                | Lambda              | ECS/EKS                  | Serverless alinea con el tema "low cost"; arranque rápido para demos                     |
 | Orquestación           | LangGraph           | LangChain agents, CrewAI | Diego ya lo conoce del Office Agent; StateGraph permite human-in-the-loop explícito      |
 | Modelo                 | Claude Sonnet 4.5   | Nova Pro, GPT-4o         | Mejor en tool use + razonamiento; disponible en Bedrock us-east-1                        |
-| Comunicación con tools | MCP                 | Function calling directo | MCP es el estándar emergente en 2026; da puntos en la charla; permite reutilizar servers |
+| Comunicación con tools | In-process tools + MCP wrappers | Function calling directo | `src/agent/tools/` = funciones Python directas (zero IPC overhead en Lambda). `src/mcp_servers/` = wrappers MCP-compatibles standalone para demo/CLI. Ver ADR-001. |
 | IaC                    | Terraform           | CDK, SAM                 | Terraform es más común en comunidad DevOps hispanoparlante; audiencia lo va a entender   |
 | Persistencia           | DynamoDB            | RDS, S3 solo             | Serverless, free tier generoso, queries simples por timestamp                            |
 | Notificaciones         | SNS → Slack webhook | EventBridge → Slack MCP  | SNS es más simple y cubre el caso de demo                                                |
@@ -111,29 +111,40 @@ finops-agent/
 ├── LICENSE                        # MIT
 ├── .gitignore
 ├── .env.example                   # Template de variables de entorno
-├── Makefile                       # Targets: install, test, deploy, destroy, demo
-├── pyproject.toml                 # Config de Python (uv o poetry)
-├── requirements.txt               # Deps pinned
-├── requirements-dev.txt           # Deps de dev/test
+├── Makefile                       # Targets: install, test, deploy, destroy, demo, tf-*
+├── pyproject.toml                 # Config de Python (hatchling + ruff + mypy + pytest)
 │
 ├── docs/
+│   ├── ADR/                       # Architecture Decision Records
+│   │   ├── ADR-001-mcp-topology.md        # In-process tools vs MCP out-of-process
+│   │   ├── ADR-002-dynamodb-schema.md     # Key design + GSI + TTL
+│   │   └── ADR-003-lambda-packaging.md    # ZIP vs container image
 │   ├── ARCHITECTURE.md            # Diagrama + decisiones (versión extendida)
 │   ├── SETUP.md                   # Paso a paso desde cero
 │   ├── DEMO_SCRIPT.md             # Guion de la demo en vivo
 │   ├── COMPARISON.md              # DIY vs AWS DevOps Agent (tabla + análisis)
 │   └── images/                    # Diagramas exportados
 │
-├── infra/                         # Todo Terraform
+├── infra/                         # Terraform root — agente (siempre deployado)
 │   ├── main.tf
 │   ├── variables.tf
 │   ├── outputs.tf
 │   ├── versions.tf
 │   ├── backend.tf                 # S3 backend (opcional, comentado)
+│   ├── demo/                      # Root Terraform INDEPENDIENTE — solo seed_leaks
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── versions.tf
+│   │   └── outputs.tf
 │   └── modules/
-│       ├── agent_lambda/          # Lambda del agente + IAM
-│       ├── eventbridge/           # Schedule + reglas
-│       ├── storage/               # DynamoDB + S3
-│       ├── notifications/         # SNS + subscriptions
+│       ├── agent_lambda/          # Lambda del agente + IAM + SQS DLQ
+│       │   ├── main.tf
+│       │   ├── iam.tf             # IAM separado para legibilidad
+│       │   ├── variables.tf
+│       │   └── outputs.tf
+│       ├── eventbridge/           # Schedule semanal + regla on-demand
+│       ├── storage/               # DynamoDB (ADR-002 schema) + S3 reports
+│       ├── notifications/         # SNS topic + Slack subscription condicional
 │       └── seed_leaks/            # Recursos "trampa" para demo (ver §6)
 │
 ├── src/
@@ -142,6 +153,13 @@ finops-agent/
 │   │   ├── handler.py             # Lambda entrypoint
 │   │   ├── graph.py               # LangGraph StateGraph
 │   │   ├── state.py               # TypedDict del estado
+│   │   ├── guardrails.py          # Límites: iteraciones, tokens, costo Bedrock
+│   │   ├── tools/                 # Funciones Python in-process (ADR-001)
+│   │   │   ├── __init__.py
+│   │   │   ├── cost_explorer.py   # TOOLS list + funciones boto3
+│   │   │   ├── cloudwatch.py
+│   │   │   ├── ec2_inventory.py
+│   │   │   └── trusted_advisor.py
 │   │   ├── nodes/
 │   │   │   ├── plan.py
 │   │   │   ├── gather.py
@@ -156,20 +174,19 @@ finops-agent/
 │   │       ├── finding.py         # Pydantic: Finding, Recommendation
 │   │       └── investigation.py
 │   │
-│   ├── mcp_servers/
-│   │   ├── cost_explorer/         # MCP server custom
-│   │   │   ├── server.py
-│   │   │   └── tools.py
+│   ├── mcp_servers/               # Wrappers MCP standalone para demo/CLI (ADR-001)
+│   │   ├── cost_explorer/
 │   │   ├── cloudwatch/
 │   │   ├── trusted_advisor/
-│   │   ├── ec2_inventory/         # EBS, NAT GW, EIPs, snapshots
+│   │   ├── ec2_inventory/
 │   │   └── github_readonly/
 │   │
 │   ├── common/
 │   │   ├── bedrock_client.py      # Wrapper con retry + logging
 │   │   ├── aws_clients.py         # Factory de boto3 clients
 │   │   ├── logger.py              # structlog config
-│   │   └── config.py              # Pydantic Settings
+│   │   ├── config.py              # Pydantic Settings (env vars, NO secrets)
+│   │   └── secrets.py             # SSM Parameter Store fetcher (secrets en runtime)
 │   │
 │   └── notifications/
 │       ├── slack.py
@@ -177,26 +194,19 @@ finops-agent/
 │
 ├── tests/
 │   ├── unit/
-│   │   ├── test_graph.py
-│   │   ├── test_nodes.py
-│   │   └── test_mcp_tools.py
 │   ├── integration/
-│   │   ├── test_bedrock_integration.py
-│   │   └── test_end_to_end.py
 │   └── fixtures/
-│       ├── cost_explorer_response.json
-│       └── cloudwatch_response.json
+│
+├── evals/                         # Harness de falsos positivos (Phase 4)
+│   └── fixtures/
 │
 ├── scripts/
-│   ├── seed_demo_leaks.sh         # Crea recursos "trampa" para demo
-│   ├── cleanup_demo_leaks.sh      # Los limpia después
 │   ├── run_local.py               # Corre el agente en local (sin Lambda)
 │   └── generate_report.py         # Exporta findings a PDF/MD
 │
 └── .github/
     └── workflows/
-        ├── ci.yml                 # Tests + lint en PR
-        └── deploy.yml             # Deploy opcional a una cuenta de demo
+        └── ci.yml                 # Tests + lint en PR
 ```
 
 ---
@@ -257,17 +267,22 @@ INVESTIGATION_TIMEOUT_SEC=180
 
 > Cada fase es un PR separable. Claude Code debe completar una fase, abrir PR, y esperar feedback antes de la siguiente. Cada fase tiene criterios de aceptación verificables.
 
-### Fase 0: Setup del repositorio (Día 1)
+### ✅ Fase 0: Setup del repositorio (Día 1) — COMPLETA
 
-**Tareas:**
-- Crear estructura de directorios completa
-- Configurar `pyproject.toml` con ruff + mypy + pytest
-- Crear `Makefile` con targets básicos
-- Escribir `README.md` inicial con badges, descripción y quickstart placeholder
-- Configurar `.gitignore` (Python + Terraform + IDE)
-- Crear `.env.example`
-- Setup de GitHub Actions para CI (lint + test, sin deploy)
-- Crear `CLAUDE.md` con convenciones del proyecto
+**Tareas completadas:**
+- Estructura de directorios completa (src/, tests/, infra/, evals/, docs/ADR/)
+- `pyproject.toml` con hatchling + ruff + mypy strict + pytest asyncio_mode=auto
+- `Makefile` con targets: install, lint, format, typecheck, test, test-integration, test-all, clean
+- `README.md` con badges, arquitectura, features table, quickstart, project structure
+- `.gitignore` (Python + Terraform + IDE)
+- `.env.example` con todas las variables de §4.3
+- GitHub Actions CI: ruff check, ruff format --check, mypy, pytest unit
+- `CLAUDE.md` con convenciones completas del proyecto
+- `src/agent/guardrails.py` — límites de iteraciones/tokens/costo Bedrock (adelantado desde Fase 8)
+- `src/common/config.py` — Pydantic Settings (env vars únicamente)
+- `src/common/secrets.py` — SSM fetcher con cache in-memory (secrets nunca en env)
+- `src/agent/tools/cost_explorer.py` — primer tool in-process como referencia (ADR-001)
+- `docs/ADR/` — 3 ADRs: MCP topology, DynamoDB schema, Lambda packaging
 
 **Criterios de aceptación:**
 - `make install` funciona
@@ -275,20 +290,27 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `make test` corre (aunque no haya tests aún)
 - CI verde en un PR trivial
 
-### Fase 1: Infraestructura base con Terraform (Día 2-3)
+### ✅ Fase 1: Infraestructura base con Terraform (Día 2-3) — COMPLETA
 
-**Tareas:**
-- Módulo `storage/`: DynamoDB con schema `{investigation_id, timestamp, finding_type, status, data}`
-- Módulo `notifications/`: SNS topic + Slack subscription
-- Módulo `agent_lambda/`: Lambda function + IAM role con permisos de SOLO LECTURA para Cost Explorer, CloudWatch, EC2, Trusted Advisor
-- Módulo `eventbridge/`: Schedule semanal + regla on-demand
-- Variables parametrizadas (environment, region, etc.)
-- Outputs útiles (ARNs, nombres de recursos)
+**Tareas completadas:**
+- Módulo `storage/`: DynamoDB con schema ADR-002 (PK=investigation_id, SK=finding#ulid|meta#summary, GSI-1 finding_type+created_at, TTL, PITR) + S3 reports bucket
+- Módulo `notifications/`: SNS topic + Slack subscription condicional (count = slack_webhook_url != "" ? 1 : 0)
+- Módulo `agent_lambda/`: Lambda python3.12 + IAM read-only granular + SQS DLQ + CW log group + reserved_concurrent_executions=5
+- Módulo `eventbridge/`: cron `0 9 ? * MON *` + event pattern on-demand + Lambda permissions
+- `infra/demo/` root independiente — sin terraform_remote_state, zero acoplamiento al estado del agente
+- Módulo `seed_leaks/`: 6 recursos "trampa" para demo (NAT GW, 2x EBS gp2, EIP, 3x snapshots, Lambda 3008MB, Log Group sin retention)
+- Makefile: targets tf-init, tf-plan, tf-apply, tf-destroy, tf-fmt, seed-demo, cleanup-demo
+
+**Decisiones aplicadas (vs plan original):**
+- DynamoDB usa schema ADR-002 (no el schema original de §5 Phase 1)
+- `seed_leaks` en root `infra/demo/` independiente (no en `infra/main.tf`)
+- IAM separado en `iam.tf` por legibilidad
+- placeholder zip generado con `archive_file` — `terraform plan` funciona sin código Phase 2
 
 **Criterios de aceptación:**
 - `terraform plan` limpio sin warnings
 - `terraform apply` crea todo en <3 minutos
-- IAM policy pasa un check de `iam-policy-validator` (sin wildcards innecesarios)
+- IAM policy sin wildcards innecesarios (Cost Explorer usa `"*"` por limitación del servicio — documentado)
 - `terraform destroy` limpia todo sin dejar recursos huérfanos
 - Estimación de costo con `infracost` < $3/mes
 
@@ -543,6 +565,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.0
+**Versión:** 1.2
 **Última actualización:** 2026-04-20
+**Fases completadas:** 0, 1
 **Siguiente revisión:** después de completar Fase 2
