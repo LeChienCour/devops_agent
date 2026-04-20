@@ -4,11 +4,37 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
+> **Build status:** Phases 0–2 complete — repo setup, Terraform infra, LangGraph agent core. Phase 3 (MCP servers) next.
+
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 
 > Built for **AWS Community Day 2026** — demonstrates how a small LangGraph agent backed by
 > Claude on Amazon Bedrock can autonomously detect cost leaks across an AWS account, reason
 > about the evidence, and propose actionable remediations with dollar-impact estimates.
+
+---
+
+## Agent Graph
+
+```
+                    ┌─────────┐
+         trigger ──▶│  plan   │  LLM generates investigation plan (tools + date range)
+                    └────┬────┘
+                         │
+                    ┌────▼────┐
+              ┌─────│  gather │  Executes AWS tools in-process (boto3)
+              │     └────┬────┘
+              │          │
+              │     ┌────▼────┐
+              └─────│ analyze │  LLM identifies anomalies, decides if more data needed
+    needs_more_data └────┬────┘
+                         │ done
+                    ┌────▼────────┐
+                    │  recommend  │  LLM produces structured Finding[] + Recommendation
+                    └─────────────┘
+```
+
+Guardrails enforced at every loop: max iterations (5), max tokens (50k), Bedrock cost ceiling ($0.50/run).
 
 ---
 
@@ -84,7 +110,7 @@ severity, estimated monthly impact in USD, remediation command/IaC, and LLM-gene
 | Agent runtime    | AWS Lambda (Python 3.12)            |
 | Orchestration    | LangGraph StateGraph                |
 | LLM              | Amazon Bedrock — Claude Sonnet 4.5  |
-| Tool protocol    | In-process tools (`agent/tools/`) + MCP wrappers for demo |
+| Tool protocol    | In-process tools `agent/tools/` (Lambda) + MCP wrappers `mcp_servers/` (demo/CLI) |
 | AWS SDK          | boto3 + aws-lambda-powertools       |
 | Data validation  | Pydantic v2 + pydantic-settings     |
 | Persistence      | DynamoDB                            |
@@ -130,21 +156,27 @@ make cleanup-demo
 .
 ├── src/
 │   ├── agent/
-│   │   ├── tools/       # In-process tool functions (boto3 wrappers, Bedrock schemas)
-│   │   ├── nodes/       # LangGraph nodes: plan, gather, analyze, recommend
-│   │   ├── prompts/     # System + node prompts as versioned .md files
-│   │   ├── models/      # Pydantic models: Finding, Recommendation, Investigation
-│   │   ├── guardrails.py  # Iteration / token / cost limits per investigation run
-│   │   └── graph.py     # LangGraph StateGraph definition
-│   ├── mcp_servers/     # Standalone MCP wrappers for demo/CLI use
+│   │   ├── tools/          # In-process tool functions (boto3 wrappers + Bedrock schemas)
+│   │   │   └── cost_explorer.py
+│   │   ├── nodes/          # LangGraph nodes: plan, gather, analyze, recommend
+│   │   ├── prompts/        # System + node prompts as versioned .md files
+│   │   ├── models/         # Pydantic v2: Finding, Recommendation, Investigation
+│   │   ├── guardrails.py   # Iteration / token / Bedrock cost limits per run
+│   │   ├── state.py        # AgentState TypedDict
+│   │   ├── graph.py        # LangGraph StateGraph (build_graph)
+│   │   └── handler.py      # Lambda entrypoint
+│   ├── mcp_servers/        # Standalone MCP wrappers for demo/CLI (import from tools/)
 │   ├── common/
-│   │   ├── config.py    # Pydantic-settings config (env vars)
-│   │   └── secrets.py   # SSM Parameter Store fetcher (secrets never in env)
-│   └── notifications/   # Slack Block Kit formatter, DynamoDB writer
+│   │   ├── config.py       # Pydantic-settings (env vars, no secrets)
+│   │   ├── secrets.py      # SSM Parameter Store fetcher with cache
+│   │   ├── bedrock_client.py  # ChatBedrockConverse + tenacity retry
+│   │   ├── aws_clients.py  # boto3 client factory
+│   │   └── logger.py       # structlog (JSON prod / Console local)
+│   └── notifications/      # Slack Block Kit formatter, DynamoDB writer
 ├── tests/
-│   ├── unit/            # Fully mocked — no external calls
+│   ├── unit/            # 27 tests, fully mocked — no external calls
 │   ├── integration/     # moto-backed AWS, VCR for Bedrock
-│   └── fixtures/        # JSON response fixtures
+│   └── fixtures/        # JSON response fixtures (cost_explorer, plan, analyze)
 ├── evals/               # False-positive measurement harness (Phase 4)
 ├── infra/               # Agent Terraform root (storage, lambda, eventbridge, SNS)
 │   ├── demo/            # Independent Terraform root — seed_leaks only

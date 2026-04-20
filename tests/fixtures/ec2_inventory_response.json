@@ -1,0 +1,51 @@
+{
+  "unattached_volumes": [
+    {
+      "VolumeId": "vol-0abc1234567890001",
+      "Size": 100,
+      "VolumeType": "gp2",
+      "State": "available",
+      "CreateTime": "2025-11-01T10:00:00+00:00",
+      "AvailabilityZone": "us-east-1a",
+      "Tags": [
+        {"Key": "Name", "Value": "orphaned-data-volume"},
+        {"Key": "Environment", "Value": "staging"}
+      ],
+      "estimated_monthly_cost": 10.0
+    },
+    {
+      "VolumeId": "vol-0abc1234567890002",
+      "Size": 50,
+      "VolumeType": "gp3",
+      "State": "available",
+      "CreateTime": "2025-10-15T08:30:00+00:00",
+      "AvailabilityZone": "us-east-1b",
+      "Tags": [
+        {"Key": "Name", "Value": "old-dev-volume"}
+      ],
+      "estimated_monthly_cost": 4.0
+    }
+  ],
+  "idle_nat_gateway": {
+    "NatGatewayId": "nat-0def567890abcdef1",
+    "VpcId": "vpc-0aabbccdd11223344",
+    "SubnetId": "subnet-0a1b2c3d4e5f67890",
+    "State": "available",
+    "total_bytes_7d": 512,
+    "is_idle": true
+  },
+  "unassociated_eips": [
+    {
+      "AllocationId": "eipalloc-0a1b2c3d4e5f67890",
+      "PublicIp": "54.123.45.67",
+      "Domain": "vpc",
+      "estimated_monthly_cost": 3.60
+    },
+    {
+      "AllocationId": "eipalloc-0b2c3d4e5f678901a",
+      "PublicIp": "52.98.76.54",
+      "Domain": "vpc",
+      "estimated_monthly_cost": 3.60
+    }
+  ]
+}

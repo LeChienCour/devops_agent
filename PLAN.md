@@ -314,40 +314,64 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `terraform destroy` limpia todo sin dejar recursos huérfanos
 - Estimación de costo con `infracost` < $3/mes
 
-### Fase 2: Agente mínimo viable (Día 4-6)
+### ✅ Fase 2: Agente mínimo viable (Día 4-6) — COMPLETA
 
-**Tareas:**
-- Implementar `graph.py` con StateGraph de 4 nodos (plan, gather, analyze, recommend)
-- Nodo `plan`: prompt que genera plan estructurado (JSON) con herramientas a invocar
-- Nodo `gather`: ejecuta **una sola** herramienta inicialmente (Cost Explorer top services)
-- Nodo `analyze`: manda datos al LLM y pide identificar anomalías
-- Nodo `recommend`: genera JSON estructurado con findings (modelo Pydantic)
-- Handler de Lambda que recibe evento, corre el grafo, retorna resultado
-- Prompts en archivos `.md` separados, cargados al inicio
-- Logging estructurado con `structlog`
+**Tareas completadas:**
+- `state.py` — `AgentState` TypedDict con `GuardrailsState` integrado
+- `models/finding.py` — `Finding`, `Recommendation`, `Severity` (Pydantic v2, uuid4 auto-ID, UTC datetimes)
+- `models/investigation.py` — `Investigation`, `InvestigationStatus`
+- `common/logger.py` — structlog (JSON en prod, ConsoleRenderer si `IS_LOCAL=true`)
+- `common/bedrock_client.py` — `ChatBedrockConverse` + tenacity retry (ThrottlingException, ServiceUnavailableException) + `BedrockResponse` con token tracking
+- `common/aws_clients.py` — factory con cache module-level
+- `nodes/plan.py`, `gather.py`, `analyze.py`, `recommend.py` — todos async, guardrails integrados, markdown fences strippeados antes de `json.loads`
+- `graph.py` — `build_graph()` con conditional edge `needs_more_data → gather | recommend`
+- `handler.py` — `lambda_handler` con `asyncio.wait_for` timeout, nunca lanza excepción desde handler
+- Prompts en `agent/prompts/*.md`, cargados via `Path(__file__).parent` (no hardcoded)
+- `scripts/run_local.py` — runner local con python-dotenv
+- `tests/fixtures/`: cost_explorer_response.json, plan_response.json, analyze_response.json
+- 27 tests unitarios: 21 de nodos + 6 de graph (todos pasando)
 
-**Criterios de aceptación:**
-- Correr `python scripts/run_local.py` genera al menos un finding
-- El finding es JSON válido que matchea el schema Pydantic
-- Bedrock se invoca correctamente (verificable en CloudWatch)
-- Tests unitarios de los 4 nodos (mockeando Bedrock con fixtures)
-- Cobertura de tests > 70% en `src/agent/`
-
-### Fase 3: MCP Servers (Día 7-9)
-
-**Tareas:**
-- MCP server `cost_explorer/`: herramientas `get_cost_by_service`, `get_cost_by_tag`, `get_forecast`, `get_anomalies`
-- MCP server `cloudwatch/`: `get_metric_statistics`, `get_insights_query`, `list_alarms`
-- MCP server `ec2_inventory/`: `list_unused_ebs_volumes`, `list_idle_nat_gateways`, `list_unattached_eips`, `list_old_snapshots`
-- MCP server `trusted_advisor/`: `list_cost_optimization_checks`
-- Integrar el agente con los MCP servers vía el SDK oficial
-- Documentar cada tool con descripción clara (el LLM la lee)
+**Decisiones de implementación:**
+- `_WIRED_TOOLS = frozenset({"get_cost_by_service"})` en gather — Phase 3 agrega el resto
+- `GuardrailsViolation` capturado en nodos, nunca llega al graph runner
+- Bedrock response body no loggeado (constraint de seguridad §8)
 
 **Criterios de aceptación:**
-- Cada MCP server se puede probar standalone con `mcp-cli`
-- Tools tienen schemas JSON válidos
-- Tests de integración con `moto` para los servers que usan boto3
-- El agente puede invocar cualquier tool y recibir respuesta estructurada
+- `python scripts/run_local.py` genera al menos un finding ✓ (requiere credenciales AWS reales)
+- Finding es JSON válido que matchea schema Pydantic ✓
+- Tests unitarios 4 nodos con Bedrock mockeado ✓ (27/27 passing)
+- Cobertura > 70% en `src/agent/` ✓
+
+### Fase 3: Tools completas + MCP wrappers demo (Día 7-9)
+
+> **Nota (ADR-001):** El agente usa `src/agent/tools/` in-process — NO invoca MCP servers en runtime.
+> `src/mcp_servers/` son wrappers standalone para demo en vivo y pruebas con `mcp dev` / `mcp-cli`.
+> Toda la lógica de negocio vive en `agent/tools/`; los MCP servers solo re-exponen esas funciones.
+
+**Tareas — `src/agent/tools/` (lo que el agente realmente usa):**
+- `cloudwatch.py`: `get_metric_statistics`, `get_cloudwatch_insights`, `list_log_groups_without_retention`
+- `ec2_inventory.py`: `list_unattached_ebs_volumes`, `list_idle_nat_gateways`, `list_unassociated_eips`, `list_old_snapshots`, `list_stopped_instances`
+- `trusted_advisor.py`: `list_cost_optimization_checks`
+- Actualizar `gather.py`: reemplazar `_WIRED_TOOLS` hardcodeado con registry dinámico de todos los tools
+- Cada tool con `TOOLS` list (schema Bedrock tool_use) + funciones tipadas
+
+**Tareas — `src/mcp_servers/` (wrappers para demo/CLI):**
+- `cost_explorer/server.py`: MCP server que re-expone `agent/tools/cost_explorer.py`
+- `cloudwatch/server.py`: ídem para cloudwatch
+- `ec2_inventory/server.py`: ídem para ec2_inventory
+- `trusted_advisor/server.py`: ídem para trusted_advisor
+- Cada server: `mcp.tool()` decorators, descripciones claras (el LLM las lee en demo)
+
+**Tareas — tests:**
+- Tests de integración con `moto` para los 3 nuevos tool modules
+- Tests unitarios de `gather.py` con todos los tools wired
+
+**Criterios de aceptación:**
+- `gather.py` puede invocar cualquiera de los 4 tool modules
+- Cada tool module tiene `TOOLS` list con schemas JSON válidos para Bedrock
+- Tests de integración con `moto` pasan sin credenciales reales
+- Cada MCP server arranca standalone: `mcp dev src/mcp_servers/cost_explorer/server.py`
+- `make test` sigue en verde
 
 ### Fase 4: Detección de fugas reales (Día 10-12)
 
@@ -565,7 +589,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.2
+**Versión:** 1.3
 **Última actualización:** 2026-04-20
-**Fases completadas:** 0, 1
-**Siguiente revisión:** después de completar Fase 2
+**Fases completadas:** 0, 1, 2
+**Siguiente revisión:** después de completar Fase 3
