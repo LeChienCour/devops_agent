@@ -1,0 +1,19 @@
+{
+  "anomalies_found": [
+    {
+      "service": "Amazon EC2-Other",
+      "pattern": "nat_gateway_idle",
+      "estimated_monthly_usd": 150.00,
+      "confidence": 0.87,
+      "evidence": {
+        "current_month_spend": 152.48,
+        "service_label": "Amazon EC2-Other",
+        "note": "EC2-Other category dominated by NAT Gateway data transfer with no matching EC2 instance growth"
+      },
+      "notes": "EC2-Other spend of $152.48 is disproportionate to EC2 compute spend of $38.20, indicating idle NAT Gateway data transfer charges"
+    }
+  ],
+  "needs_more_data": false,
+  "additional_tools_needed": [],
+  "reasoning": "EC2-Other spend of $152.48 vastly exceeds EC2 compute ($38.20), a classic signal of idle NAT Gateway traffic. No additional tools needed to confirm this pattern."
+}

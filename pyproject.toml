@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finops-agent"
+version = "0.1.0"
+description = "Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+authors = [{ name = "Diego Sandoval", email = "cheval.diego@gmail.com" }]
+keywords = ["finops", "aws", "langgraph", "bedrock", "cost-optimization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+]
+
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-aws>=0.2.0",
+    "boto3>=1.35.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "mcp>=1.0.0",
+    "structlog>=24.0",
+    "aws-lambda-powertools>=3.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio",
+    "pytest-mock",
+    "moto[all]>=5.0",
+    "ruff",
+    "mypy",
+    "boto3-stubs[essential]",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent", "mcp_servers", "common", "notifications"]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+exclude = ["tests"]
+
+[[tool.mypy.overrides]]
+module = ["langgraph.*", "langchain_aws.*", "mcp.*", "aws_lambda_powertools.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+pythonpath = ["src"]
