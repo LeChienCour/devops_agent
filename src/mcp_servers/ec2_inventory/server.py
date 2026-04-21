@@ -11,6 +11,8 @@ Usage:
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from agent.tools import ec2_inventory
@@ -19,7 +21,7 @@ mcp = FastMCP("finops-ec2-inventory")
 
 
 @mcp.tool()
-def list_unattached_ebs_volumes(region: str = "us-east-1") -> dict:
+def list_unattached_ebs_volumes(region: str = "us-east-1") -> dict[str, Any]:
     """List all EBS volumes that are unattached (in 'available' state).
 
     Unattached volumes incur storage costs — $0.08–$0.10/GB/month — with no
@@ -37,7 +39,7 @@ def list_unattached_ebs_volumes(region: str = "us-east-1") -> dict:
 
 
 @mcp.tool()
-def list_idle_nat_gateways(region: str = "us-east-1") -> dict:
+def list_idle_nat_gateways(region: str = "us-east-1") -> dict[str, Any]:
     """List NAT Gateways with negligible outbound traffic over the last 7 days.
 
     A NAT Gateway with less than 1 MB of outbound traffic in 7 days is considered
@@ -55,7 +57,7 @@ def list_idle_nat_gateways(region: str = "us-east-1") -> dict:
 
 
 @mcp.tool()
-def list_unassociated_eips(region: str = "us-east-1") -> dict:
+def list_unassociated_eips(region: str = "us-east-1") -> dict[str, Any]:
     """List Elastic IP addresses that are not associated with any resource.
 
     AWS charges $3.60/month per unassociated Elastic IP. These are safe to
@@ -75,7 +77,7 @@ def list_unassociated_eips(region: str = "us-east-1") -> dict:
 def list_old_snapshots(
     min_age_days: int = 90,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """List EBS snapshots older than a minimum age in days.
 
     Old snapshots cost $0.05/GB/month. Snapshots whose source volume no longer
@@ -97,7 +99,7 @@ def list_old_snapshots(
 def list_stopped_instances(
     min_stopped_days: int = 30,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """List EC2 instances that have been stopped for longer than a minimum period.
 
     Stopped instances do not incur compute charges, but any attached EBS volumes

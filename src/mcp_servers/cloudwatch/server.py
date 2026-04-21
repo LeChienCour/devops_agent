@@ -11,6 +11,8 @@ Usage:
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from agent.tools import cloudwatch
@@ -28,7 +30,7 @@ def get_metric_statistics(
     period_seconds: int = 3600,
     statistics: list[str] | None = None,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return CloudWatch metric statistics for a given namespace and metric.
 
     Use this tool to check resource utilisation over a time window — for example
@@ -67,7 +69,7 @@ def get_cloudwatch_insights(
     start_time_epoch: int,
     end_time_epoch: int,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Run a CloudWatch Logs Insights query and return the results.
 
     Use this tool to analyse Lambda memory utilisation, detect error patterns,
@@ -100,7 +102,7 @@ def get_cloudwatch_insights(
 @mcp.tool()
 def list_log_groups_without_retention(
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """List all CloudWatch Log Groups with no retention policy.
 
     Log Groups without a retention policy grow indefinitely, accumulating

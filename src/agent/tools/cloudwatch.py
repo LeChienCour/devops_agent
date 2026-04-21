@@ -6,6 +6,7 @@ MCP-compatible schema kept in src/mcp_servers/cloudwatch/ for standalone demo us
 from __future__ import annotations
 
 import time
+from typing import Any, cast
 
 from aws_lambda_powertools import Logger
 
@@ -14,7 +15,7 @@ from common.aws_clients import get_client
 logger = Logger(service="finops-agent")
 
 # Tool schemas exposed to Bedrock via tool_use
-TOOLS: list[dict] = [
+TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_metric_statistics",
         "description": (
@@ -133,7 +134,7 @@ def get_metric_statistics(
     period_seconds: int = 3600,
     statistics: list[str] | None = None,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return CloudWatch metric statistics for the specified metric.
 
     Args:
@@ -162,7 +163,7 @@ def get_metric_statistics(
         Period=period_seconds,
         Statistics=statistics,
     )
-    return response
+    return cast(dict[str, Any], response)
 
 
 def get_cloudwatch_insights(
@@ -173,7 +174,7 @@ def get_cloudwatch_insights(
     region: str = "us-east-1",
     _max_poll_seconds: int = 30,
     _poll_interval_seconds: float = 2.0,
-) -> dict:
+) -> dict[str, Any]:
     """Run a CloudWatch Logs Insights query and poll until complete.
 
     Starts the query, then polls ``get_query_results`` every 2 seconds
@@ -226,7 +227,7 @@ def get_cloudwatch_insights(
 
 def list_log_groups_without_retention(
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """List all CloudWatch Log Groups that have no retention policy configured.
 
     Paginates through all log groups in the account/region and filters

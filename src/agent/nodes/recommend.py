@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langgraph.types import RunnableConfig
+from langchain_core.runnables import RunnableConfig
 from pydantic import ValidationError
 
 from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolationError

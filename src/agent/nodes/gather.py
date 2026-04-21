@@ -5,9 +5,9 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
-from langgraph.types import RunnableConfig
+from langchain_core.runnables import RunnableConfig
 
-from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolation
+from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolationError
 from agent.state import AgentState
 from agent.tools import TOOL_REGISTRY
 from common.config import AgentConfig
@@ -92,7 +92,7 @@ async def gather_node(state: AgentState, config: RunnableConfig) -> AgentState: 
 
     try:
         guards.check_all(state["guardrails"])
-    except GuardrailsViolation as exc:
+    except GuardrailsViolationError as exc:
         log.warning(
             "gather_node_guardrail_violation",
             reason=exc.reason,

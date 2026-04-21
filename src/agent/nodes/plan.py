@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.types import RunnableConfig
+from langchain_core.runnables import RunnableConfig
 
 from agent.state import AgentState
 from agent.tools.cost_explorer import TOOLS

@@ -11,6 +11,8 @@ Usage:
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from agent.tools import cost_explorer
@@ -24,7 +26,7 @@ def get_cost_by_service(
     end_date: str,
     granularity: str = "MONTHLY",
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return AWS costs grouped by service for the given date range.
 
     Use this tool to identify which AWS services are spending the most
@@ -47,7 +49,7 @@ def get_cost_anomalies(
     threshold_usd: float = 5.0,
     lookback_days: int = 30,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return cost anomalies detected by AWS Cost Anomaly Detection.
 
     Use this tool to find unexpected cost spikes above a given USD threshold.
@@ -69,7 +71,7 @@ def get_cost_forecast(
     start_date: str,
     end_date: str,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return the AWS cost forecast for a future date range.
 
     Use this tool to project whether costs are trending upward unexpectedly.

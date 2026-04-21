@@ -12,11 +12,13 @@ Architecture (ADR-001):
 
 from __future__ import annotations
 
+from typing import Any
+
 from agent.tools import cloudwatch, cost_explorer, ec2_inventory, trusted_advisor
 
 # Maps tool name → (module, callable).
 # The gather node uses this to dispatch calls without a long if/elif chain.
-TOOL_REGISTRY: dict[str, tuple] = {
+TOOL_REGISTRY: dict[str, tuple[Any, ...]] = {
     # cost_explorer
     "get_cost_by_service": (cost_explorer, cost_explorer.get_cost_by_service),
     "get_cost_anomalies": (cost_explorer, cost_explorer.get_cost_anomalies),
@@ -45,7 +47,7 @@ TOOL_REGISTRY: dict[str, tuple] = {
 }
 
 # Combined Bedrock tool_use schema list passed to the plan node prompt.
-ALL_TOOLS: list[dict] = (
+ALL_TOOLS: list[dict[str, Any]] = (
     cost_explorer.TOOLS + cloudwatch.TOOLS + ec2_inventory.TOOLS + trusted_advisor.TOOLS
 )
 

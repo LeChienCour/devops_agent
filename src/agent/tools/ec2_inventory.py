@@ -6,6 +6,7 @@ MCP-compatible schema kept in src/mcp_servers/ec2_inventory/ for standalone demo
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from aws_lambda_powertools import Logger
 
@@ -34,7 +35,7 @@ _EIP_MONTHLY_COST = 3.60
 # NAT Gateway idle threshold: 1 MB over 7 days
 _NAT_IDLE_BYTES_THRESHOLD = 1_048_576
 
-TOOLS: list[dict] = [
+TOOLS: list[dict[str, Any]] = [
     {
         "name": "list_unattached_ebs_volumes",
         "description": (
@@ -148,7 +149,7 @@ TOOLS: list[dict] = [
 
 def list_unattached_ebs_volumes(
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return all EBS volumes in 'available' (unattached) state.
 
     Args:
@@ -192,7 +193,7 @@ def list_unattached_ebs_volumes(
 
 def list_idle_nat_gateways(
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return NAT Gateways with fewer than 1 MB of outbound traffic in the last 7 days.
 
     Queries CloudWatch ``NatGateway`` namespace ``BytesOutToDestination`` metric
@@ -255,7 +256,7 @@ def list_idle_nat_gateways(
 
 def list_unassociated_eips(
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return Elastic IP addresses not associated with any resource.
 
     Filters to VPC-domain EIPs where ``AssociationId`` is absent.
@@ -292,7 +293,7 @@ def list_unassociated_eips(
 def list_old_snapshots(
     min_age_days: int = 90,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return EBS snapshots older than ``min_age_days`` days.
 
     Uses a paginator to retrieve all self-owned snapshots, filters by age,
@@ -362,7 +363,7 @@ def list_old_snapshots(
 def list_stopped_instances(
     min_stopped_days: int = 30,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return EC2 instances in stopped state older than ``min_stopped_days``.
 
     Filters to instances whose ``LaunchTime`` is older than the threshold.

@@ -62,7 +62,7 @@ async def _run_investigation(event: dict[str, Any]) -> dict[str, Any]:
     initial_state = _build_initial_state(investigation_id, trigger)
 
     final_state: AgentState = await asyncio.wait_for(
-        graph.ainvoke(initial_state),
+        graph.ainvoke(initial_state),  # type: ignore[arg-type]
         timeout=agent_config.investigation_timeout_sec,
     )
 

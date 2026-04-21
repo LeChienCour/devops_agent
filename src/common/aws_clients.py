@@ -28,5 +28,5 @@ def get_client(service: str, region: str = "us-east-1") -> Any:
     """
     key = f"{service}:{region}"
     if key not in _clients:
-        _clients[key] = boto3.client(service, region_name=region)
+        _clients[key] = boto3.client(service, region_name=region)  # type: ignore[call-overload]
     return _clients[key]

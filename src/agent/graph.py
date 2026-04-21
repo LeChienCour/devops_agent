@@ -28,7 +28,7 @@ def _route_after_analyze(state: AgentState) -> str:
     return "recommend"
 
 
-def build_graph(config: AgentConfig) -> CompiledStateGraph:  # noqa: ARG001
+def build_graph(config: AgentConfig) -> CompiledStateGraph[AgentState]:  # noqa: ARG001
     """Construct and compile the FinOps LangGraph StateGraph.
 
     Graph topology::
@@ -42,7 +42,7 @@ def build_graph(config: AgentConfig) -> CompiledStateGraph:  # noqa: ARG001
     Returns:
         Compiled LangGraph graph ready for ``ainvoke``.
     """
-    graph: StateGraph = StateGraph(AgentState)
+    graph: StateGraph = StateGraph(AgentState)  # type: ignore[type-arg]
 
     graph.add_node("plan", plan_node)
     graph.add_node("gather", gather_node)

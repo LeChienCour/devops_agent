@@ -91,7 +91,7 @@ class BedrockClient:
             llm = self._llm.bind_tools(tools)  # type: ignore[assignment]
 
         start = time.monotonic()
-        response: AIMessage = llm.invoke(messages)  # type: ignore[assignment]
+        response: AIMessage = llm.invoke(messages)
         latency_ms = (time.monotonic() - start) * 1000
 
         usage: dict[str, Any] = getattr(response, "usage_metadata", {}) or {}

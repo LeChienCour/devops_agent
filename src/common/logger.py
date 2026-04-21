@@ -9,9 +9,10 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from typing import cast
 
 import structlog
-from structlog.types import BindableLogger
+from structlog.stdlib import BoundLogger
 
 __all__ = ["get_logger"]
 
@@ -62,7 +63,7 @@ def _configure() -> None:
     _configured = True
 
 
-def get_logger(name: str) -> BindableLogger:
+def get_logger(name: str) -> BoundLogger:
     """Return a structlog bound logger for the given name.
 
     Args:
@@ -72,4 +73,4 @@ def get_logger(name: str) -> BindableLogger:
         A structlog BoundLogger pre-bound with the given name.
     """
     _configure()
-    return structlog.get_logger(name)
+    return cast(BoundLogger, structlog.get_logger(name))

@@ -14,6 +14,8 @@ Usage:
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
 
 from agent.tools import trusted_advisor
@@ -22,7 +24,7 @@ mcp = FastMCP("finops-trusted-advisor")
 
 
 @mcp.tool()
-def list_cost_optimization_checks(region: str = "us-east-1") -> dict:
+def list_cost_optimization_checks(region: str = "us-east-1") -> dict[str, Any]:
     """List all Trusted Advisor cost optimisation checks with current status and savings.
 
     Trusted Advisor analyses your AWS account and flags cost optimisation

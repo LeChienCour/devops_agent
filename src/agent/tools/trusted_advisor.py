@@ -8,6 +8,8 @@ The Support API endpoint is global and only available in us-east-1.
 
 from __future__ import annotations
 
+from typing import Any
+
 from aws_lambda_powertools import Logger
 from botocore.exceptions import ClientError
 
@@ -18,7 +20,7 @@ logger = Logger(service="finops-agent")
 # Trusted Advisor Support API is only available in us-east-1
 _SUPPORT_REGION = "us-east-1"
 
-TOOLS: list[dict] = [
+TOOLS: list[dict[str, Any]] = [
     {
         "name": "list_cost_optimization_checks",
         "description": (
@@ -47,7 +49,7 @@ TOOLS: list[dict] = [
 
 def list_cost_optimization_checks(
     region: str = "us-east-1",  # noqa: ARG001 — kept for registry interface consistency
-) -> dict:
+) -> dict[str, Any]:
     """Return Trusted Advisor cost optimisation checks with their current status.
 
     Fetches all checks in the ``cost_optimizing`` category and retrieves

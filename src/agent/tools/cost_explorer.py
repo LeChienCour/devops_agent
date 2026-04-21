@@ -5,13 +5,15 @@ MCP-compatible schema kept in src/mcp_servers/cost_explorer/ for standalone demo
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import boto3
 from aws_lambda_powertools import Logger
 
 logger = Logger(service="finops-agent")
 
 # Tool schemas exposed to Bedrock via tool_use
-TOOLS: list[dict] = [
+TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_cost_by_service",
         "description": (
@@ -91,7 +93,7 @@ def get_cost_by_service(
     end_date: str,
     granularity: str = "MONTHLY",
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return costs grouped by service for the given date range.
 
     Args:
@@ -110,14 +112,14 @@ def get_cost_by_service(
         Metrics=["UnblendedCost"],
         GroupBy=[{"Type": "DIMENSION", "Key": "SERVICE"}],
     )
-    return response
+    return cast(dict[str, Any], response)
 
 
 def get_cost_anomalies(
     threshold_usd: float = 5.0,
     lookback_days: int = 30,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return cost anomalies above the given USD threshold.
 
     Args:
@@ -140,14 +142,14 @@ def get_cost_anomalies(
         },
         TotalImpact={"NumericOperator": "GREATER_THAN", "StartValue": threshold_usd},
     )
-    return response
+    return cast(dict[str, Any], response)
 
 
 def get_cost_forecast(
     start_date: str,
     end_date: str,
     region: str = "us-east-1",
-) -> dict:
+) -> dict[str, Any]:
     """Return cost forecast for the given date range.
 
     Args:
@@ -164,4 +166,4 @@ def get_cost_forecast(
         Metric="UNBLENDED_COST",
         Granularity="MONTHLY",
     )
-    return response
+    return cast(dict[str, Any], response)
