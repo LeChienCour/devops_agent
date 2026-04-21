@@ -119,11 +119,14 @@ class TestGraphFullRun:
                 return analyze_response
             return recommend_response
 
+        mock_ce_fn = MagicMock(return_value=ce_data)
+        fake_registry = {"get_cost_by_service": (MagicMock(), mock_ce_fn)}
+
         with (
             patch("agent.nodes.plan.BedrockClient") as mock_plan_client_cls,
             patch("agent.nodes.analyze.BedrockClient") as mock_analyze_client_cls,
             patch("agent.nodes.recommend.BedrockClient") as mock_recommend_client_cls,
-            patch("agent.nodes.gather.cost_explorer.get_cost_by_service") as mock_ce,
+            patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry),
         ):
             mock_plan_client = MagicMock()
             mock_plan_client.invoke.return_value = plan_response
@@ -136,8 +139,6 @@ class TestGraphFullRun:
             mock_recommend_client = MagicMock()
             mock_recommend_client.invoke.return_value = recommend_response
             mock_recommend_client_cls.return_value = mock_recommend_client
-
-            mock_ce.return_value = ce_data
 
             config = AgentConfig()
             compiled = build_graph(config)
@@ -158,11 +159,13 @@ class TestGraphFullRun:
         analyze_data = _load_fixture("analyze_response.json")
         analyze_response = _make_bedrock_response(json.dumps(analyze_data))
 
+        fake_registry: dict[str, Any] = {}
+
         with (
             patch("agent.nodes.plan.BedrockClient") as mock_plan_client_cls,
             patch("agent.nodes.analyze.BedrockClient") as mock_analyze_client_cls,
             patch("agent.nodes.recommend.BedrockClient") as mock_recommend_client_cls,
-            patch("agent.nodes.gather.cost_explorer.get_cost_by_service") as mock_ce,
+            patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry),
         ):
             mock_plan_client = MagicMock()
             mock_plan_client.invoke.return_value = bad_plan_response
@@ -175,8 +178,6 @@ class TestGraphFullRun:
             mock_recommend_client = MagicMock()
             mock_recommend_client.invoke.return_value = _make_bedrock_response("[]")
             mock_recommend_client_cls.return_value = mock_recommend_client
-
-            mock_ce.return_value = {}
 
             config = AgentConfig()
             compiled = build_graph(config)
@@ -214,11 +215,14 @@ class TestGraphGuardrails:
         analyze_response = _make_bedrock_response(json.dumps(analyze_more))
         recommend_response = _make_bedrock_response("[]")
 
+        mock_ce_fn = MagicMock(return_value=ce_data)
+        fake_registry = {"get_cost_by_service": (MagicMock(), mock_ce_fn)}
+
         with (
             patch("agent.nodes.plan.BedrockClient") as mock_plan_cls,
             patch("agent.nodes.analyze.BedrockClient") as mock_analyze_cls,
             patch("agent.nodes.recommend.BedrockClient") as mock_recommend_cls,
-            patch("agent.nodes.gather.cost_explorer.get_cost_by_service") as mock_ce,
+            patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry),
         ):
             mock_plan_client = MagicMock()
             mock_plan_client.invoke.return_value = plan_response
@@ -231,8 +235,6 @@ class TestGraphGuardrails:
             mock_recommend_client = MagicMock()
             mock_recommend_client.invoke.return_value = recommend_response
             mock_recommend_cls.return_value = mock_recommend_client
-
-            mock_ce.return_value = ce_data
 
             # max_iterations=1 means the first gather will hit the limit
             with patch.dict(
@@ -275,11 +277,14 @@ class TestGraphGuardrails:
         )
         recommend_response = _make_bedrock_response("[]")
 
+        mock_ce_fn = MagicMock(return_value=ce_data)
+        fake_registry = {"get_cost_by_service": (MagicMock(), mock_ce_fn)}
+
         with (
             patch("agent.nodes.plan.BedrockClient") as mock_plan_cls,
             patch("agent.nodes.analyze.BedrockClient") as mock_analyze_cls,
             patch("agent.nodes.recommend.BedrockClient") as mock_recommend_cls,
-            patch("agent.nodes.gather.cost_explorer.get_cost_by_service") as mock_ce,
+            patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry),
         ):
             mock_plan_client = MagicMock()
             mock_plan_client.invoke.return_value = plan_response
@@ -292,8 +297,6 @@ class TestGraphGuardrails:
             mock_recommend_client = MagicMock()
             mock_recommend_client.invoke.return_value = recommend_response
             mock_recommend_cls.return_value = mock_recommend_client
-
-            mock_ce.return_value = ce_data
 
             config = AgentConfig()
             compiled = build_graph(config)

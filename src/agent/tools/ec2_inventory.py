@@ -5,7 +5,7 @@ MCP-compatible schema kept in src/mcp_servers/ec2_inventory/ for standalone demo
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from aws_lambda_powertools import Logger
 
@@ -129,7 +129,9 @@ TOOLS: list[dict] = [
             "properties": {
                 "min_stopped_days": {
                     "type": "integer",
-                    "description": "Minimum days an instance must have been stopped. Defaults to 30.",
+                    "description": (
+                        "Minimum days an instance must have been stopped. Defaults to 30."
+                    ),
                     "default": 30,
                 },
                 "region": {
@@ -175,7 +177,11 @@ def list_unattached_ebs_volumes(
                 "VolumeId": vol.get("VolumeId"),
                 "Size": size_gb,
                 "VolumeType": vol_type,
-                "CreateTime": create_time.isoformat() if isinstance(create_time, datetime) else str(create_time),
+                "CreateTime": (
+                    create_time.isoformat()
+                    if isinstance(create_time, datetime)
+                    else str(create_time)
+                ),
                 "AvailabilityZone": vol.get("AvailabilityZone"),
                 "Tags": vol.get("Tags", []),
                 "estimated_monthly_cost": estimated_monthly_cost,
@@ -208,7 +214,7 @@ def list_idle_nat_gateways(
         Filter=[{"Name": "state", "Values": ["available"]}]
     )
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     seven_days_ago = now - timedelta(days=7)
 
     results = []
@@ -308,7 +314,7 @@ def list_old_snapshots(
     ec2 = get_client("ec2", region)
     paginator = ec2.get_paginator("describe_snapshots")
 
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=min_age_days)
+    cutoff = datetime.now(tz=UTC) - timedelta(days=min_age_days)
 
     old_snapshots = []
     for page in paginator.paginate(OwnerIds=["self"]):
@@ -320,7 +326,7 @@ def list_old_snapshots(
             if not isinstance(start_time, datetime):
                 continue
             if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
+                start_time = start_time.replace(tzinfo=UTC)
             if start_time >= cutoff:
                 continue
 
@@ -379,7 +385,7 @@ def list_stopped_instances(
         Filters=[{"Name": "instance-state-name", "Values": ["stopped"]}]
     )
 
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=min_stopped_days)
+    cutoff = datetime.now(tz=UTC) - timedelta(days=min_stopped_days)
     instances = []
 
     for reservation in response.get("Reservations", []):
@@ -390,7 +396,7 @@ def list_stopped_instances(
             if not isinstance(launch_time, datetime):
                 continue
             if launch_time.tzinfo is None:
-                launch_time = launch_time.replace(tzinfo=timezone.utc)
+                launch_time = launch_time.replace(tzinfo=UTC)
             if launch_time >= cutoff:
                 continue
 

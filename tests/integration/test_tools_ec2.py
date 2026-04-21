@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import boto3
 import pytest
@@ -204,7 +204,7 @@ class TestListOldSnapshots:
         # Patch StartTime on the moto snapshot to simulate old age
         import unittest.mock as mock
 
-        old_time = datetime.now(tz=timezone.utc) - timedelta(days=120)
+        old_time = datetime.now(tz=UTC) - timedelta(days=120)
 
         original_paginate = ec2.get_paginator("describe_snapshots").paginate
 
@@ -240,7 +240,7 @@ class TestListOldSnapshots:
 
         import unittest.mock as mock
 
-        old_time = datetime.now(tz=timezone.utc) - timedelta(days=120)
+        old_time = datetime.now(tz=UTC) - timedelta(days=120)
 
         original_paginate = ec2.get_paginator("describe_snapshots").paginate
 

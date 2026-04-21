@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
-> **Build status:** Phases 0–2 complete — repo setup, Terraform infra, LangGraph agent core. Phase 3 (MCP servers) next.
+> **Build status:** Phases 0–3 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers. Phase 4 (leak detection) next.
 
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 
@@ -156,8 +156,8 @@ make cleanup-demo
 .
 ├── src/
 │   ├── agent/
-│   │   ├── tools/          # In-process tool functions (boto3 wrappers + Bedrock schemas)
-│   │   │   └── cost_explorer.py
+│   │   ├── tools/          # In-process tool functions — TOOL_REGISTRY (12 tools)
+│   │   │   ├── cost_explorer.py, cloudwatch.py, ec2_inventory.py, trusted_advisor.py
 │   │   ├── nodes/          # LangGraph nodes: plan, gather, analyze, recommend
 │   │   ├── prompts/        # System + node prompts as versioned .md files
 │   │   ├── models/         # Pydantic v2: Finding, Recommendation, Investigation
@@ -165,7 +165,7 @@ make cleanup-demo
 │   │   ├── state.py        # AgentState TypedDict
 │   │   ├── graph.py        # LangGraph StateGraph (build_graph)
 │   │   └── handler.py      # Lambda entrypoint
-│   ├── mcp_servers/        # Standalone MCP wrappers for demo/CLI (import from tools/)
+│   ├── mcp_servers/        # FastMCP wrappers for demo/CLI — zero logic, import from tools/
 │   ├── common/
 │   │   ├── config.py       # Pydantic-settings (env vars, no secrets)
 │   │   ├── secrets.py      # SSM Parameter Store fetcher with cache
@@ -174,9 +174,9 @@ make cleanup-demo
 │   │   └── logger.py       # structlog (JSON prod / Console local)
 │   └── notifications/      # Slack Block Kit formatter, DynamoDB writer
 ├── tests/
-│   ├── unit/            # 27 tests, fully mocked — no external calls
-│   ├── integration/     # moto-backed AWS, VCR for Bedrock
-│   └── fixtures/        # JSON response fixtures (cost_explorer, plan, analyze)
+│   ├── unit/            # 48 tests, fully mocked — no external calls
+│   ├── integration/     # 21 moto-backed tests (EC2, CloudWatch)
+│   └── fixtures/        # JSON fixtures (cost_explorer, plan, analyze, ec2_inventory)
 ├── evals/               # False-positive measurement harness (Phase 4)
 ├── infra/               # Agent Terraform root (storage, lambda, eventbridge, SNS)
 │   ├── demo/            # Independent Terraform root — seed_leaks only

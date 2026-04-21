@@ -342,36 +342,26 @@ INVESTIGATION_TIMEOUT_SEC=180
 - Tests unitarios 4 nodos con Bedrock mockeado ✓ (27/27 passing)
 - Cobertura > 70% en `src/agent/` ✓
 
-### Fase 3: Tools completas + MCP wrappers demo (Día 7-9)
+### ✅ Fase 3: Tools completas + MCP wrappers demo (Día 7-9) — COMPLETA
 
-> **Nota (ADR-001):** El agente usa `src/agent/tools/` in-process — NO invoca MCP servers en runtime.
-> `src/mcp_servers/` son wrappers standalone para demo en vivo y pruebas con `mcp dev` / `mcp-cli`.
-> Toda la lógica de negocio vive en `agent/tools/`; los MCP servers solo re-exponen esas funciones.
+> **ADR-001:** agente usa `src/agent/tools/` in-process. `src/mcp_servers/` = wrappers standalone para demo/CLI únicamente.
 
-**Tareas — `src/agent/tools/` (lo que el agente realmente usa):**
-- `cloudwatch.py`: `get_metric_statistics`, `get_cloudwatch_insights`, `list_log_groups_without_retention`
-- `ec2_inventory.py`: `list_unattached_ebs_volumes`, `list_idle_nat_gateways`, `list_unassociated_eips`, `list_old_snapshots`, `list_stopped_instances`
-- `trusted_advisor.py`: `list_cost_optimization_checks`
-- Actualizar `gather.py`: reemplazar `_WIRED_TOOLS` hardcodeado con registry dinámico de todos los tools
-- Cada tool con `TOOLS` list (schema Bedrock tool_use) + funciones tipadas
-
-**Tareas — `src/mcp_servers/` (wrappers para demo/CLI):**
-- `cost_explorer/server.py`: MCP server que re-expone `agent/tools/cost_explorer.py`
-- `cloudwatch/server.py`: ídem para cloudwatch
-- `ec2_inventory/server.py`: ídem para ec2_inventory
-- `trusted_advisor/server.py`: ídem para trusted_advisor
-- Cada server: `mcp.tool()` decorators, descripciones claras (el LLM las lee en demo)
-
-**Tareas — tests:**
-- Tests de integración con `moto` para los 3 nuevos tool modules
-- Tests unitarios de `gather.py` con todos los tools wired
+**Tareas completadas:**
+- `tools/cloudwatch.py`: `get_metric_statistics`, `get_cloudwatch_insights`, `list_log_groups_without_retention`
+- `tools/ec2_inventory.py`: `list_unattached_ebs_volumes`, `list_idle_nat_gateways`, `list_unassociated_eips`, `list_old_snapshots`, `list_stopped_instances` (costo estimado incluido)
+- `tools/trusted_advisor.py`: `list_cost_optimization_checks` (catch `SubscriptionRequiredException` → warning + empty list)
+- `tools/__init__.py`: `TOOL_REGISTRY` (12 tools) + `ALL_TOOLS` (Bedrock schemas concatenados)
+- `gather.py` refactorizado: dispatch dinámico via `TOOL_REGISTRY` + `inspect.signature` para kwargs
+- `mcp_servers/cost_explorer/server.py`, `cloudwatch/server.py`, `ec2_inventory/server.py`, `trusted_advisor/server.py` — FastMCP wrappers, zero lógica propia
+- `pyproject.toml`: `pythonpath = ["src"]` en pytest config
+- 30 tests nuevos (14 EC2 moto + 7 CloudWatch moto + 9 gather unit) — **57/57 total passing**
 
 **Criterios de aceptación:**
-- `gather.py` puede invocar cualquiera de los 4 tool modules
-- Cada tool module tiene `TOOLS` list con schemas JSON válidos para Bedrock
-- Tests de integración con `moto` pasan sin credenciales reales
-- Cada MCP server arranca standalone: `mcp dev src/mcp_servers/cost_explorer/server.py`
-- `make test` sigue en verde
+- `gather.py` invoca cualquiera de los 12 tools vía registry ✓
+- Cada tool module tiene `TOOLS` list con schemas Bedrock válidos ✓
+- Tests de integración con `moto` pasan sin credenciales reales ✓
+- Cada MCP server arranca standalone: `mcp dev src/mcp_servers/<name>/server.py` ✓
+- `make test` verde: 57/57 ✓
 
 ### Fase 4: Detección de fugas reales (Día 10-12)
 
@@ -591,5 +581,6 @@ Ideas para evolucionar el proyecto después del Community Day:
 **Autor del plan:** Diego (con Claude como co-autor)
 **Versión:** 1.3
 **Última actualización:** 2026-04-20
-**Fases completadas:** 0, 1, 2
-**Siguiente revisión:** después de completar Fase 3
+**Versión:** 1.4
+**Fases completadas:** 0, 1, 2, 3
+**Siguiente revisión:** después de completar Fase 4
