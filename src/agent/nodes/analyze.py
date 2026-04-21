@@ -10,7 +10,7 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.types import RunnableConfig
 
-from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolation
+from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolationError
 from agent.state import AgentState
 from common.bedrock_client import BedrockClient
 from common.config import AgentConfig
@@ -39,7 +39,7 @@ async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:
     Stores the raw anomaly JSON as an AIMessage so the recommend node can
     access it without re-parsing state.
 
-    Runs guardrail checks after the LLM call; on ``GuardrailsViolation`` forces
+    Runs guardrail checks after the LLM call; on ``GuardrailsViolationError`` forces
     ``needs_more_data=False`` to break the loop.
 
     Args:
@@ -116,7 +116,7 @@ async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:
 
     try:
         guards.check_all(state["guardrails"])
-    except GuardrailsViolation as exc:
+    except GuardrailsViolationError as exc:
         log.warning(
             "analyze_node_guardrail_violation",
             reason=exc.reason,

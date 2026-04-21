@@ -175,9 +175,7 @@ class TestListOldSnapshots:
         ec2 = boto3.client("ec2", region_name="us-east-1")
 
         # Create a volume to snapshot
-        vol_resp = ec2.create_volume(
-            AvailabilityZone="us-east-1a", Size=10, VolumeType="gp2"
-        )
+        vol_resp = ec2.create_volume(AvailabilityZone="us-east-1a", Size=10, VolumeType="gp2")
         volume_id = vol_resp["VolumeId"]
 
         # Create a snapshot — moto sets StartTime to 'now'
@@ -195,9 +193,7 @@ class TestListOldSnapshots:
         """Each snapshot entry includes an estimated_monthly_cost based on VolumeSize."""
         _clear_client_cache()
         ec2 = boto3.client("ec2", region_name="us-east-1")
-        vol_resp = ec2.create_volume(
-            AvailabilityZone="us-east-1a", Size=200, VolumeType="gp2"
-        )
+        vol_resp = ec2.create_volume(AvailabilityZone="us-east-1a", Size=200, VolumeType="gp2")
         volume_id = vol_resp["VolumeId"]
         snap_resp = ec2.create_snapshot(VolumeId=volume_id)
 
@@ -232,9 +228,7 @@ class TestListOldSnapshots:
         """snapshot entries include source_volume_exists boolean."""
         _clear_client_cache()
         ec2 = boto3.client("ec2", region_name="us-east-1")
-        vol_resp = ec2.create_volume(
-            AvailabilityZone="us-east-1a", Size=10, VolumeType="gp2"
-        )
+        vol_resp = ec2.create_volume(AvailabilityZone="us-east-1a", Size=10, VolumeType="gp2")
         volume_id = vol_resp["VolumeId"]
         ec2.create_snapshot(VolumeId=volume_id)
 

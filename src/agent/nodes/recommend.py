@@ -11,7 +11,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.types import RunnableConfig
 from pydantic import ValidationError
 
-from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolation
+from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolationError
 from agent.models.finding import Finding, Recommendation
 from agent.state import AgentState
 from common.bedrock_client import BedrockClient
@@ -185,7 +185,7 @@ async def recommend_node(state: AgentState, config: RunnableConfig) -> AgentStat
 
     try:
         guards.check_all(state["guardrails"])
-    except GuardrailsViolation as exc:
+    except GuardrailsViolationError as exc:
         log.warning("recommend_node_guardrail_violation", reason=exc.reason)
 
     return state

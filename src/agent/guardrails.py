@@ -50,7 +50,7 @@ class GuardrailsState:
         self.iterations += 1
 
 
-class GuardrailsViolation(Exception):
+class GuardrailsViolationError(Exception):
     """Raised when an investigation exceeds a configured guardrail limit."""
 
     def __init__(self, reason: str) -> None:
@@ -78,7 +78,7 @@ class Guardrails:
             state: Current run state.
 
         Raises:
-            GuardrailsViolation: When iterations >= max_iterations.
+            GuardrailsViolationError: When iterations >= max_iterations.
         """
         if state.iterations >= self.config.max_iterations:
             msg = (
@@ -87,7 +87,7 @@ class Guardrails:
             )
             logger.warning(msg)
             state.violations.append(msg)
-            raise GuardrailsViolation(msg)
+            raise GuardrailsViolationError(msg)
 
     def check_tokens(self, state: GuardrailsState) -> None:
         """Raise if the total token budget has been exceeded.
@@ -96,7 +96,7 @@ class Guardrails:
             state: Current run state with updated token counts.
 
         Raises:
-            GuardrailsViolation: When total tokens >= max_tokens_per_investigation.
+            GuardrailsViolationError: When total tokens >= max_tokens_per_investigation.
         """
         total = state.total_input_tokens + state.total_output_tokens
         if total >= self.config.max_tokens_per_investigation:
@@ -106,7 +106,7 @@ class Guardrails:
             )
             logger.warning(msg)
             state.violations.append(msg)
-            raise GuardrailsViolation(msg)
+            raise GuardrailsViolationError(msg)
 
     def check_cost(self, state: GuardrailsState) -> None:
         """Raise if the estimated Bedrock cost ceiling has been exceeded.
@@ -115,7 +115,7 @@ class Guardrails:
             state: Current run state with updated cost estimate.
 
         Raises:
-            GuardrailsViolation: When estimated cost >= bedrock_cost_ceiling_usd.
+            GuardrailsViolationError: When estimated cost >= bedrock_cost_ceiling_usd.
         """
         if state.estimated_cost_usd >= self.config.bedrock_cost_ceiling_usd:
             msg = (
@@ -125,7 +125,7 @@ class Guardrails:
             )
             logger.warning(msg)
             state.violations.append(msg)
-            raise GuardrailsViolation(msg)
+            raise GuardrailsViolationError(msg)
 
     def check_all(self, state: GuardrailsState) -> None:
         """Run all guardrail checks in sequence.
@@ -134,7 +134,7 @@ class Guardrails:
             state: Current run state.
 
         Raises:
-            GuardrailsViolation: On first violated limit.
+            GuardrailsViolationError: On first violated limit.
         """
         self.check_iteration(state)
         self.check_tokens(state)

@@ -333,7 +333,7 @@ INVESTIGATION_TIMEOUT_SEC=180
 
 **Decisiones de implementación:**
 - `_WIRED_TOOLS = frozenset({"get_cost_by_service"})` en gather — Phase 3 agrega el resto
-- `GuardrailsViolation` capturado en nodos, nunca llega al graph runner
+- `GuardrailsViolationError` capturado en nodos, nunca llega al graph runner
 - Bedrock response body no loggeado (constraint de seguridad §8)
 
 **Criterios de aceptación:**

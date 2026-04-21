@@ -160,9 +160,7 @@ def list_unattached_ebs_volumes(
         ``estimated_monthly_cost``.
     """
     ec2 = get_client("ec2", region)
-    response = ec2.describe_volumes(
-        Filters=[{"Name": "status", "Values": ["available"]}]
-    )
+    response = ec2.describe_volumes(Filters=[{"Name": "status", "Values": ["available"]}])
 
     volumes = []
     for vol in response.get("Volumes", []):
@@ -210,9 +208,7 @@ def list_idle_nat_gateways(
     ec2 = get_client("ec2", region)
     cw = get_client("cloudwatch", region)
 
-    ngw_response = ec2.describe_nat_gateways(
-        Filter=[{"Name": "state", "Values": ["available"]}]
-    )
+    ngw_response = ec2.describe_nat_gateways(Filter=[{"Name": "state", "Values": ["available"]}])
 
     now = datetime.now(tz=UTC)
     seven_days_ago = now - timedelta(days=7)

@@ -8,13 +8,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
 
 from agent.guardrails import GuardrailsState
-from agent.models.finding import Finding, Recommendation, Severity
+from agent.models.finding import Finding, Severity
 from agent.nodes.analyze import analyze_node
 from agent.nodes.gather import gather_node
 from agent.nodes.plan import plan_node
@@ -51,7 +51,9 @@ def _make_state(**overrides: Any) -> AgentState:
     return base
 
 
-def _make_bedrock_response(content: str, input_tokens: int = 100, output_tokens: int = 200) -> BedrockResponse:
+def _make_bedrock_response(
+    content: str, input_tokens: int = 100, output_tokens: int = 200
+) -> BedrockResponse:
     return BedrockResponse(
         message=AIMessage(content=content),
         input_tokens=input_tokens,
@@ -92,7 +94,9 @@ class TestPlanNode:
     async def test_plan_node_valid_response_updates_guardrails(self) -> None:
         """Token counts are recorded in guardrails state after invocation."""
         plan_data = _load_fixture("plan_response.json")
-        mock_response = _make_bedrock_response(json.dumps(plan_data), input_tokens=500, output_tokens=300)
+        mock_response = _make_bedrock_response(
+            json.dumps(plan_data), input_tokens=500, output_tokens=300
+        )
 
         with patch("agent.nodes.plan.BedrockClient") as mock_client_cls:
             mock_client = MagicMock()
@@ -312,7 +316,7 @@ class TestAnalyzeNode:
 
     @pytest.mark.asyncio
     async def test_analyze_node_guardrail_violation_forces_no_more_data(self) -> None:
-        """GuardrailsViolation from check_all forces needs_more_data=False."""
+        """GuardrailsViolationError from check_all forces needs_more_data=False."""
         analysis = {
             "anomalies_found": [],
             "needs_more_data": True,

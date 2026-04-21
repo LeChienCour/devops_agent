@@ -20,7 +20,6 @@ from agent.models.finding import Recommendation
 from agent.state import AgentState
 from common.bedrock_client import BedrockResponse
 from common.config import AgentConfig
-from langgraph.graph.state import CompiledStateGraph
 
 _FIXTURES = Path(__file__).parent.parent / "fixtures"
 
