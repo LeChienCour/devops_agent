@@ -18,6 +18,7 @@ from common.bedrock_client import BedrockClient
 from common.config import AgentConfig
 from common.logger import get_logger
 from notifications.dynamodb_writer import DynamoDBWriter
+from notifications.slack_notifier import SlackNotifier
 
 logger = get_logger(__name__)
 
@@ -194,6 +195,12 @@ async def recommend_node(state: AgentState, config: RunnableConfig) -> AgentStat
         )
     except Exception as exc:  # noqa: BLE001
         log.error("recommend_node_persistence_failed", error=str(exc))
+
+    try:
+        notifier = SlackNotifier(agent_config)
+        notifier.notify(recommendation=recommendation, investigation_id=investigation_id)
+    except Exception as exc:  # noqa: BLE001
+        log.error("recommend_node_slack_failed", error=str(exc))
 
     try:
         guards.check_all(state["guardrails"])

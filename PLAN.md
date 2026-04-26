@@ -391,7 +391,7 @@ INVESTIGATION_TIMEOUT_SEC=180
 - 52 tests pasando (unit + integration), mypy strict 0 errores
 - **Infracost agregado** a `.github/workflows/ci.yml` (job `infracost`, solo en PRs) — comenta diff de costo en cada PR que toca `infra/`; requiere secret `INFRACOST_API_KEY` en GitHub repo settings
 
-### Fase 5: Notificaciones y UX (Día 13-14)
+### ✅ Fase 5: Notificaciones y UX (Día 13-14) — COMPLETA
 
 **Tareas:**
 - Formato de mensaje Slack con Block Kit (no solo texto plano)
@@ -404,6 +404,15 @@ INVESTIGATION_TIMEOUT_SEC=180
 - Mensaje de Slack se ve bien (probado en un canal real)
 - PDF generado es presentable como "reporte ejecutivo"
 - El resumen tiene sentido aún sin leer el detalle
+
+**Decisiones de implementación:**
+- `src/notifications/slack_notifier.py` — `SlackNotifier.notify()` construye Block Kit payload; findings ordenados desc por USD, cap 10; emoji por severidad (`CRITICAL=🔴 HIGH=🟠 MEDIUM=🟡 LOW=🟢`); vacío = no HTTP ni SSM call
+- HTTP via `urllib.request` stdlib, sin dependencia nueva
+- Webhook URL via `get_slack_webhook_url()` (SSM); nunca loggeada
+- Fallo de Slack swallowed → no bloquea resultado de investigación
+- `scripts/generate_report.py` — CLI `--investigation-id` → DynamoDB query → Markdown stdout o `--output file.md`
+- `recommend.py` wired: Slack llamado tras DynamoDB, ambos en bloques `except Exception` independientes
+- 82 tests pasando (30 nuevos), mypy strict 0 errores
 
 ### Fase 6: Seeding de fugas para demo (Día 15)
 
@@ -586,7 +595,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.5
+**Versión:** 1.6
 **Última actualización:** 2026-04-26
-**Fases completadas:** 0, 1, 2, 3, 4
-**Siguiente revisión:** después de completar Fase 5
+**Fases completadas:** 0, 1, 2, 3, 4, 5
+**Siguiente revisión:** después de completar Fase 6

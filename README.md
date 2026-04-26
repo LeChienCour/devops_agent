@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
-> **Build status:** Phases 0–4 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI. Phase 5 (notifications) next.
+> **Build status:** Phases 0–5 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator. Phase 6 (demo seeding) next.
 
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 
@@ -172,9 +172,9 @@ make cleanup-demo
 │   │   ├── bedrock_client.py  # ChatBedrockConverse + tenacity retry
 │   │   ├── aws_clients.py  # boto3 client factory
 │   │   └── logger.py       # structlog (JSON prod / Console local)
-│   └── notifications/      # DynamoDB writer (Phase 4) + Slack Block Kit (Phase 5)
+│   └── notifications/      # dynamodb_writer.py + slack_notifier.py (Block Kit)
 ├── tests/
-│   ├── unit/            # 52 tests, fully mocked — no external calls
+│   ├── unit/            # 82 tests, fully mocked — no external calls
 │   ├── integration/     # 21 moto-backed tests (EC2, CloudWatch)
 │   └── fixtures/        # JSON fixtures (cost_explorer, plan, analyze, ec2_inventory, findings)
 ├── evals/               # False-positive measurement harness — rule-based, no external calls
@@ -183,7 +183,7 @@ make cleanup-demo
 │   └── modules/         # Reusable modules (storage, agent_lambda, notifications, …)
 ├── docs/
 │   └── ADR/             # Architecture Decision Records (001-MCP, 002-DynamoDB, 003-Lambda)
-├── scripts/             # Local runner, demo seeding, report generator
+├── scripts/             # run_local.py, generate_report.py (Markdown from DynamoDB), demo seeding
 ├── pyproject.toml       # Build system, dependencies, ruff + mypy config
 ├── Makefile             # Developer + infra workflow targets
 ├── PLAN.md              # Master build plan (source of truth for Claude Code)
