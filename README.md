@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
-> **Build status:** Phases 0–5 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator. Phase 6 (demo seeding) next.
+> **Build status:** Phases 0–6 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator, demo leak seeding. Phase 7 (talk docs) next.
 
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 

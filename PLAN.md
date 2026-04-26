@@ -414,25 +414,31 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `recommend.py` wired: Slack llamado tras DynamoDB, ambos en bloques `except Exception` independientes
 - 82 tests pasando (30 nuevos), mypy strict 0 errores
 
-### Fase 6: Seeding de fugas para demo (Día 15)
+### ✅ Fase 6: Seeding de fugas para demo (Día 15) — COMPLETA
 
 **Tareas:**
 - Módulo Terraform `seed_leaks/` que crea INTENCIONALMENTE:
-  - 1 NAT Gateway en subnet sin workload
-  - 2 EBS volumes gp2 unattached
-  - 1 Elastic IP sin asociar
-  - 3 snapshots viejos (tagged para cleanup)
-  - 1 Lambda con 3GB memoria usando 200MB
-  - 1 Log Group sin retention
-- Script `seed_demo_leaks.sh`: `terraform apply -target=module.seed_leaks`
-- Script `cleanup_demo_leaks.sh`: destroy del módulo
-- Costos totales del seeding: < $2/mes si se deja correr
+  - ~~1 NAT Gateway en subnet sin workload~~ — **omitido**: $32/mes es demasiado para un recurso de demo
+  - 2 EBS volumes gp2 unattached (50 GB c/u) — doble leak: unattached + tipo gp2
+  - 1 Elastic IP sin asociar — $3.60/mes
+  - 3 snapshots viejos (tagged `CreatedForDemo=true`)
+  - 1 Lambda con 3008 MB memoria (no-op handler) — detectado por CloudWatch Insights
+  - 1 Log Group sin retention (`retention_in_days` omitido)
+- `make seed-demo` / `make cleanup-demo` via Makefile
+- Costo total si se deja corriendo: < $15/mes
 
 **Criterios de aceptación:**
 - `make seed-demo` crea todo en < 2 min
-- El agente detecta las 6+ fugas sembradas en una corrida
+- El agente detecta las 5+ fugas sembradas en una corrida
 - `make cleanup-demo` limpia sin dejar residuos
 - Todos los recursos tienen tag `Purpose=demo-finops-agent`
+
+**Decisiones de implementación:**
+- `infra/modules/seed_leaks/` — módulo reutilizable, flat (sin sub-módulos)
+- `infra/demo/` — root Terraform independiente, estado separado del agente
+- Lambda handler generado con `archive_file` data source inline, sin archivos externos
+- `aws_iam_role_policy_attachment` con managed policy `AWSLambdaBasicExecutionRole`, sin inline policies
+- NAT Gateway excluido — documentado con comment en ambos archivos
 
 ### Fase 7: Documentación de la charla (Día 16-18)
 
@@ -595,7 +601,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.6
+**Versión:** 1.7
 **Última actualización:** 2026-04-26
-**Fases completadas:** 0, 1, 2, 3, 4, 5
-**Siguiente revisión:** después de completar Fase 6
+**Fases completadas:** 0, 1, 2, 3, 4, 5, 6
+**Siguiente revisión:** después de completar Fase 7
