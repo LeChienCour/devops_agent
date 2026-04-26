@@ -17,6 +17,8 @@ from agent.state import AgentState
 from common.bedrock_client import BedrockClient
 from common.config import AgentConfig
 from common.logger import get_logger
+from notifications.dynamodb_writer import DynamoDBWriter
+from notifications.slack_notifier import SlackNotifier
 
 logger = get_logger(__name__)
 
@@ -168,12 +170,13 @@ async def recommend_node(state: AgentState, config: RunnableConfig) -> AgentStat
     else:
         summary = "No actionable cost-waste findings above the threshold were identified."
 
-    state["recommendation"] = Recommendation(
+    recommendation = Recommendation(
         findings=validated_findings,
         total_estimated_monthly_usd=total_usd,
         summary=summary,
         investigation_id=investigation_id,
     )
+    state["recommendation"] = recommendation
     state["findings"] = validated_findings
     state["messages"] = list(state.get("messages", [])) + messages + [bedrock_response.message]
 
@@ -182,6 +185,22 @@ async def recommend_node(state: AgentState, config: RunnableConfig) -> AgentStat
         findings_count=len(validated_findings),
         total_savings_usd=total_usd,
     )
+
+    try:
+        writer = DynamoDBWriter(agent_config)
+        writer.write_investigation(
+            investigation_id=investigation_id,
+            recommendation=recommendation,
+            guardrails_state=state["guardrails"],
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.error("recommend_node_persistence_failed", error=str(exc))
+
+    try:
+        notifier = SlackNotifier(agent_config)
+        notifier.notify(recommendation=recommendation, investigation_id=investigation_id)
+    except Exception as exc:  # noqa: BLE001
+        log.error("recommend_node_slack_failed", error=str(exc))
 
     try:
         guards.check_all(state["guardrails"])

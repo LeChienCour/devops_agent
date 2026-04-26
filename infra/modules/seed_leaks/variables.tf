@@ -16,14 +16,8 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "vpc_id" {
-  description = "VPC ID in which to create the demo subnet and NAT Gateway. If empty, a new VPC is created."
-  type        = string
-  default     = ""
-}
-
 variable "availability_zone" {
-  description = "AZ for the demo subnet and EBS volumes."
+  description = "AZ for the demo EBS volumes and snapshots."
   type        = string
   default     = "us-east-1a"
 }
@@ -31,7 +25,7 @@ variable "availability_zone" {
 variable "ebs_volume_size_gb" {
   description = "Size (GB) of each unattached gp2 demo EBS volume."
   type        = number
-  default     = 20
+  default     = 50
 }
 
 variable "tags" {

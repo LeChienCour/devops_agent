@@ -5,6 +5,11 @@
 # It can be applied and destroyed freely without affecting Lambda, DynamoDB,
 # SNS, or EventBridge resources.
 #
+# NOTE — NAT Gateway is intentionally excluded from the demo leaks.
+# A NAT Gateway costs ~$32/month even when idle. That cost is too high for a
+# resource that exists only to be detected during a live demo. All other leaks
+# stay well under $5/month combined. See the seed_leaks module for details.
+#
 # Usage:
 #   cd infra/demo
 #   terraform init
@@ -28,7 +33,7 @@ module "seed_leaks" {
 
   tags = {
     Project     = var.project_name
-    ManagedBy   = "terraform-seed-leaks"
+    ManagedBy   = "terraform"
     Purpose     = "demo-finops-agent"
     Environment = "demo"
   }

@@ -5,15 +5,20 @@
 # targets to detect during live demos. Every resource is tagged for easy
 # identification and bulk cleanup.
 #
-# COST WARNING: If left running, these resources cost approximately:
-#   - NAT Gateway:  ~$32/month (hourly fee + $0.045/GB data)
-#   - 2x EBS gp2:   ~$4/month  ($0.10/GB × 20 GB × 2)
-#   - 1x EIP:       ~$3.60/month (unassociated)
-#   - 3x Snapshots: ~$0.15/month ($0.05/GB, ~1 GB each)
-#   - Lambda:       near-zero (only billed on invocations)
-#   TOTAL:          ~$40/month — run only during demo preparation!
+# NOTE — NAT Gateway is intentionally omitted.
+# A NAT Gateway costs ~$32/month even when completely idle (hourly fee plus
+# $0.045/GB data processed). That is too expensive to leave running as a demo
+# resource. All other leaks stay well under $5/month combined.
 #
-# Deploy: cd infra/demo && terraform apply
+# Approximate monthly cost if left running:
+#   - 2x EBS gp2 50 GB each : ~$10/month  ($0.10/GB × 50 GB × 2)
+#   - 1x Unassociated EIP   : ~$3.60/month
+#   - 3x Snapshots (~1 GB)  : ~$0.15/month ($0.05/GB)
+#   - Lambda (no invocations): ~$0.00/month
+#   - CloudWatch Log Group  : ~$0.00/month (no data ingested)
+#   TOTAL                   : < $15/month — acceptable for a demo account
+#
+# Deploy : cd infra/demo && terraform apply
 # Destroy: cd infra/demo && terraform destroy
 # ---------------------------------------------------------------------------
 
@@ -21,71 +26,15 @@ locals {
   demo_tags = merge(var.tags, {
     Purpose     = "demo-finops-agent"
     Environment = "demo"
-    ManagedBy   = "terraform-seed-leaks"
+    ManagedBy   = "terraform"
   })
 }
 
 # ---------------------------------------------------------------------------
-# Networking — VPC + subnet for the idle NAT Gateway
+# Leak 1: Unattached EBS gp2 volumes (×2) — 50 GB each, state=available
 #
-# We create a minimal VPC + public subnet solely to host the NAT Gateway.
-# No instances, no workload — the NAT Gateway just sits here burning money.
-# ---------------------------------------------------------------------------
-resource "aws_vpc" "demo" {
-  cidr_block           = "10.99.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = merge(local.demo_tags, {
-    Name = "${var.project_name}-demo-vpc"
-  })
-}
-
-# Public subnet (NAT Gateway requires a public subnet with an IGW)
-resource "aws_subnet" "demo_public" {
-  vpc_id            = aws_vpc.demo.id
-  cidr_block        = "10.99.1.0/24"
-  availability_zone = var.availability_zone
-
-  tags = merge(local.demo_tags, {
-    Name = "${var.project_name}-demo-public-subnet"
-  })
-}
-
-resource "aws_internet_gateway" "demo" {
-  vpc_id = aws_vpc.demo.id
-
-  tags = merge(local.demo_tags, {
-    Name = "${var.project_name}-demo-igw"
-  })
-}
-
-# ---------------------------------------------------------------------------
-# Leak 1: NAT Gateway — idle, no workload, ~$32/month
-# ---------------------------------------------------------------------------
-resource "aws_eip" "nat_gateway" {
-  domain = "vpc"
-
-  tags = merge(local.demo_tags, {
-    Name     = "${var.project_name}-demo-nat-eip"
-    LeakType = "idle-nat-gateway"
-  })
-}
-
-resource "aws_nat_gateway" "demo" {
-  allocation_id = aws_eip.nat_gateway.id
-  subnet_id     = aws_subnet.demo_public.id
-
-  tags = merge(local.demo_tags, {
-    Name     = "${var.project_name}-demo-nat-gw"
-    LeakType = "idle-nat-gateway"
-  })
-
-  depends_on = [aws_internet_gateway.demo]
-}
-
-# ---------------------------------------------------------------------------
-# Leak 2: Unattached EBS gp2 volumes — 2x 20 GB, state=available
+# gp2 is the older volume type. Two leak signals in one: unattached AND
+# wrong volume type (gp3 is cheaper and faster at equal or lower cost).
 # ---------------------------------------------------------------------------
 resource "aws_ebs_volume" "unattached" {
   count             = 2
@@ -100,11 +49,14 @@ resource "aws_ebs_volume" "unattached" {
 }
 
 # ---------------------------------------------------------------------------
-# Leak 3: Unassociated Elastic IP — $3.60/month
+# Leak 2: Unassociated Elastic IP — $3.60/month
+#
+# An EIP that is allocated but not associated with any running instance or
+# NAT gateway is billed at $0.005/hour (~$3.60/month).
 # ---------------------------------------------------------------------------
 resource "aws_eip" "unassociated" {
   domain = "vpc"
-  # Intentionally NOT associated with any instance or NAT gateway
+  # Intentionally NOT associated with any instance or NAT Gateway
 
   tags = merge(local.demo_tags, {
     Name     = "${var.project_name}-demo-orphan-eip"
@@ -113,38 +65,11 @@ resource "aws_eip" "unassociated" {
 }
 
 # ---------------------------------------------------------------------------
-# Leak 4: Snapshots from a transient EBS volume
+# Leak 3: Oversized Lambda — 3008 MB allocation for a trivial no-op handler
 #
-# We create a small EBS volume, snapshot it 3 times, then the volume persists
-# (also as a leak) but the snapshots represent "orphaned" snapshots whose
-# source volume will appear unrelated to any active workload.
-# ---------------------------------------------------------------------------
-resource "aws_ebs_volume" "snapshot_source" {
-  availability_zone = var.availability_zone
-  size              = 1 # 1 GB — minimal cost for the source volume
-  type              = "gp3"
-
-  tags = merge(local.demo_tags, {
-    Name     = "${var.project_name}-demo-snapshot-source"
-    LeakType = "snapshot-source-volume"
-  })
-}
-
-resource "aws_ebs_snapshot" "demo" {
-  count     = 3
-  volume_id = aws_ebs_volume.snapshot_source.id
-
-  tags = merge(local.demo_tags, {
-    Name     = "${var.project_name}-demo-old-snapshot-${count.index + 1}"
-    LeakType = "orphaned-snapshot"
-  })
-}
-
-# ---------------------------------------------------------------------------
-# Leak 5: Oversized Lambda — 3008 MB allocation for a trivial handler
-#
-# The agent should detect that max_memory_used << memory_allocated.
-# We use archive_file to create the handler inline.
+# The agent detects that max_memory_used << memory_allocated.
+# We use the archive provider to generate the deployment zip inline so no
+# external files or build steps are required.
 # ---------------------------------------------------------------------------
 data "archive_file" "oversized_lambda_zip" {
   type        = "zip"
@@ -155,6 +80,7 @@ data "archive_file" "oversized_lambda_zip" {
       import json
 
       def handler(event, context):
+          print("demo")
           return {"statusCode": 200, "body": json.dumps("ok")}
     PYTHON
     filename = "handler.py"
@@ -180,7 +106,8 @@ resource "aws_iam_role" "oversized_lambda" {
   tags = local.demo_tags
 }
 
-# Attach the AWS managed basic execution policy (only needs CloudWatch Logs)
+# Attach the AWS-managed basic execution policy (CloudWatch Logs only).
+# Using aws_iam_role_policy_attachment — no inline policies.
 resource "aws_iam_role_policy_attachment" "oversized_lambda_basic" {
   role       = aws_iam_role.oversized_lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -188,7 +115,7 @@ resource "aws_iam_role_policy_attachment" "oversized_lambda_basic" {
 
 resource "aws_lambda_function" "oversized" {
   function_name    = "${var.project_name}-demo-oversized-${var.environment}"
-  description      = "Demo leak: Lambda with 3008 MB allocated but uses <200 MB. Detected by FinOps Agent."
+  description      = "Demo leak: 3008 MB allocated but handler uses <200 MB. Detected by FinOps Agent."
   runtime          = "python3.12"
   handler          = "handler.handler"
   filename         = data.archive_file.oversized_lambda_zip.output_path
@@ -205,16 +132,45 @@ resource "aws_lambda_function" "oversized" {
 }
 
 # ---------------------------------------------------------------------------
-# Leak 6: CloudWatch Log Group with no retention policy
+# Leak 4: CloudWatch Log Group with no retention policy
 #
-# retention_in_days = 0 means logs are kept indefinitely.
-# Storage costs grow without bound as the agent generates logs.
+# Omitting retention_in_days means logs are retained indefinitely.
+# Storage costs grow without bound as the log group accumulates data.
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_log_group" "no_retention" {
-  name              = "/demo/${var.project_name}/no-retention-log-group"
-  retention_in_days = 0 # intentionally no retention — this is the leak
+  name = "/demo/${var.project_name}/no-retention-log-group"
+  # retention_in_days is intentionally omitted — logs kept forever (the leak)
 
   tags = merge(local.demo_tags, {
     LeakType = "log-group-no-retention"
+  })
+}
+
+# ---------------------------------------------------------------------------
+# Leak 5: Old EBS snapshots (×3)
+#
+# We create a small source EBS volume (10 GB gp3) and take 3 snapshots of it.
+# The snapshots represent old, orphaned snapshots no longer tied to an active
+# workload — a common cost leak in long-running accounts.
+# ---------------------------------------------------------------------------
+resource "aws_ebs_volume" "snapshot_source" {
+  availability_zone = var.availability_zone
+  size              = 10 # 10 GB gp3 — minimal cost for the source volume
+  type              = "gp3"
+
+  tags = merge(local.demo_tags, {
+    Name     = "${var.project_name}-demo-snapshot-source"
+    LeakType = "snapshot-source-volume"
+  })
+}
+
+resource "aws_ebs_snapshot" "demo" {
+  count     = 3
+  volume_id = aws_ebs_volume.snapshot_source.id
+
+  tags = merge(local.demo_tags, {
+    Name            = "${var.project_name}-demo-old-snapshot-${count.index + 1}"
+    LeakType        = "orphaned-snapshot"
+    CreatedForDemo  = "true"
   })
 }

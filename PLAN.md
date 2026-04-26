@@ -363,7 +363,7 @@ INVESTIGATION_TIMEOUT_SEC=180
 - Cada MCP server arranca standalone: `mcp dev src/mcp_servers/<name>/server.py` ✓
 - `make test` verde: 57/57 ✓
 
-### Fase 4: Detección de fugas reales (Día 10-12)
+### ✅ Fase 4: Detección de fugas reales (Día 10-12) — COMPLETA
 
 **Tareas:**
 - Implementar lógica de detección para los 8 escenarios clave:
@@ -384,7 +384,14 @@ INVESTIGATION_TIMEOUT_SEC=180
 - Findings se persisten en DynamoDB con schema correcto
 - Falsos positivos < 20% en data real
 
-### Fase 5: Notificaciones y UX (Día 13-14)
+**Decisiones de implementación:**
+- `src/notifications/dynamodb_writer.py` — `DynamoDBWriter.write_investigation()` escribe `meta#summary` + `finding#<uuid>` por finding; TTL = now + 90d; re-raise `ClientError`
+- Persistence wired en `recommend.py` post-Recommendation; fallo de storage nunca bloquea el retorno
+- `evals/false_positive_rate.py` — harness rule-based, sin llamadas externas; clasifica TP/FP por `resource_ids` + `estimated_monthly_usd > 0`
+- 52 tests pasando (unit + integration), mypy strict 0 errores
+- **Infracost agregado** a `.github/workflows/ci.yml` (job `infracost`, solo en PRs) — comenta diff de costo en cada PR que toca `infra/`; requiere secret `INFRACOST_API_KEY` en GitHub repo settings
+
+### ✅ Fase 5: Notificaciones y UX (Día 13-14) — COMPLETA
 
 **Tareas:**
 - Formato de mensaje Slack con Block Kit (no solo texto plano)
@@ -398,25 +405,40 @@ INVESTIGATION_TIMEOUT_SEC=180
 - PDF generado es presentable como "reporte ejecutivo"
 - El resumen tiene sentido aún sin leer el detalle
 
-### Fase 6: Seeding de fugas para demo (Día 15)
+**Decisiones de implementación:**
+- `src/notifications/slack_notifier.py` — `SlackNotifier.notify()` construye Block Kit payload; findings ordenados desc por USD, cap 10; emoji por severidad (`CRITICAL=🔴 HIGH=🟠 MEDIUM=🟡 LOW=🟢`); vacío = no HTTP ni SSM call
+- HTTP via `urllib.request` stdlib, sin dependencia nueva
+- Webhook URL via `get_slack_webhook_url()` (SSM); nunca loggeada
+- Fallo de Slack swallowed → no bloquea resultado de investigación
+- `scripts/generate_report.py` — CLI `--investigation-id` → DynamoDB query → Markdown stdout o `--output file.md`
+- `recommend.py` wired: Slack llamado tras DynamoDB, ambos en bloques `except Exception` independientes
+- 82 tests pasando (30 nuevos), mypy strict 0 errores
+
+### ✅ Fase 6: Seeding de fugas para demo (Día 15) — COMPLETA
 
 **Tareas:**
 - Módulo Terraform `seed_leaks/` que crea INTENCIONALMENTE:
-  - 1 NAT Gateway en subnet sin workload
-  - 2 EBS volumes gp2 unattached
-  - 1 Elastic IP sin asociar
-  - 3 snapshots viejos (tagged para cleanup)
-  - 1 Lambda con 3GB memoria usando 200MB
-  - 1 Log Group sin retention
-- Script `seed_demo_leaks.sh`: `terraform apply -target=module.seed_leaks`
-- Script `cleanup_demo_leaks.sh`: destroy del módulo
-- Costos totales del seeding: < $2/mes si se deja correr
+  - ~~1 NAT Gateway en subnet sin workload~~ — **omitido**: $32/mes es demasiado para un recurso de demo
+  - 2 EBS volumes gp2 unattached (50 GB c/u) — doble leak: unattached + tipo gp2
+  - 1 Elastic IP sin asociar — $3.60/mes
+  - 3 snapshots viejos (tagged `CreatedForDemo=true`)
+  - 1 Lambda con 3008 MB memoria (no-op handler) — detectado por CloudWatch Insights
+  - 1 Log Group sin retention (`retention_in_days` omitido)
+- `make seed-demo` / `make cleanup-demo` via Makefile
+- Costo total si se deja corriendo: < $15/mes
 
 **Criterios de aceptación:**
 - `make seed-demo` crea todo en < 2 min
-- El agente detecta las 6+ fugas sembradas en una corrida
+- El agente detecta las 5+ fugas sembradas en una corrida
 - `make cleanup-demo` limpia sin dejar residuos
 - Todos los recursos tienen tag `Purpose=demo-finops-agent`
+
+**Decisiones de implementación:**
+- `infra/modules/seed_leaks/` — módulo reutilizable, flat (sin sub-módulos)
+- `infra/demo/` — root Terraform independiente, estado separado del agente
+- Lambda handler generado con `archive_file` data source inline, sin archivos externos
+- `aws_iam_role_policy_attachment` con managed policy `AWSLambdaBasicExecutionRole`, sin inline policies
+- NAT Gateway excluido — documentado con comment en ambos archivos
 
 ### Fase 7: Documentación de la charla (Día 16-18)
 
@@ -579,8 +601,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.3
-**Última actualización:** 2026-04-20
-**Versión:** 1.4
-**Fases completadas:** 0, 1, 2, 3
-**Siguiente revisión:** después de completar Fase 4
+**Versión:** 1.7
+**Última actualización:** 2026-04-26
+**Fases completadas:** 0, 1, 2, 3, 4, 5, 6
+**Siguiente revisión:** después de completar Fase 7

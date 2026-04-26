@@ -19,7 +19,7 @@ variable "project_name" {
 }
 
 variable "availability_zone" {
-  description = "Availability zone for EBS volumes and subnet."
+  description = "Availability zone for EBS volumes and snapshots."
   type        = string
   default     = "us-east-1a"
 }
@@ -27,5 +27,5 @@ variable "availability_zone" {
 variable "ebs_volume_size_gb" {
   description = "Size of each unattached demo EBS volume in GB."
   type        = number
-  default     = 20
+  default     = 50
 }
