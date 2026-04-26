@@ -363,7 +363,7 @@ INVESTIGATION_TIMEOUT_SEC=180
 - Cada MCP server arranca standalone: `mcp dev src/mcp_servers/<name>/server.py` ✓
 - `make test` verde: 57/57 ✓
 
-### Fase 4: Detección de fugas reales (Día 10-12)
+### ✅ Fase 4: Detección de fugas reales (Día 10-12) — COMPLETA
 
 **Tareas:**
 - Implementar lógica de detección para los 8 escenarios clave:
@@ -383,6 +383,13 @@ INVESTIGATION_TIMEOUT_SEC=180
 - Los montos estimados son correctos (validado manualmente vs Cost Explorer)
 - Findings se persisten en DynamoDB con schema correcto
 - Falsos positivos < 20% en data real
+
+**Decisiones de implementación:**
+- `src/notifications/dynamodb_writer.py` — `DynamoDBWriter.write_investigation()` escribe `meta#summary` + `finding#<uuid>` por finding; TTL = now + 90d; re-raise `ClientError`
+- Persistence wired en `recommend.py` post-Recommendation; fallo de storage nunca bloquea el retorno
+- `evals/false_positive_rate.py` — harness rule-based, sin llamadas externas; clasifica TP/FP por `resource_ids` + `estimated_monthly_usd > 0`
+- 52 tests pasando (unit + integration), mypy strict 0 errores
+- **Infracost agregado** a `.github/workflows/ci.yml` (job `infracost`, solo en PRs) — comenta diff de costo en cada PR que toca `infra/`; requiere secret `INFRACOST_API_KEY` en GitHub repo settings
 
 ### Fase 5: Notificaciones y UX (Día 13-14)
 
@@ -579,8 +586,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.3
-**Última actualización:** 2026-04-20
-**Versión:** 1.4
-**Fases completadas:** 0, 1, 2, 3
-**Siguiente revisión:** después de completar Fase 4
+**Versión:** 1.5
+**Última actualización:** 2026-04-26
+**Fases completadas:** 0, 1, 2, 3, 4
+**Siguiente revisión:** después de completar Fase 5

@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
-> **Build status:** Phases 0–3 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers. Phase 4 (leak detection) next.
+> **Build status:** Phases 0–4 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI. Phase 5 (notifications) next.
 
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 
@@ -172,12 +172,12 @@ make cleanup-demo
 │   │   ├── bedrock_client.py  # ChatBedrockConverse + tenacity retry
 │   │   ├── aws_clients.py  # boto3 client factory
 │   │   └── logger.py       # structlog (JSON prod / Console local)
-│   └── notifications/      # Slack Block Kit formatter, DynamoDB writer
+│   └── notifications/      # DynamoDB writer (Phase 4) + Slack Block Kit (Phase 5)
 ├── tests/
-│   ├── unit/            # 48 tests, fully mocked — no external calls
+│   ├── unit/            # 52 tests, fully mocked — no external calls
 │   ├── integration/     # 21 moto-backed tests (EC2, CloudWatch)
-│   └── fixtures/        # JSON fixtures (cost_explorer, plan, analyze, ec2_inventory)
-├── evals/               # False-positive measurement harness (Phase 4)
+│   └── fixtures/        # JSON fixtures (cost_explorer, plan, analyze, ec2_inventory, findings)
+├── evals/               # False-positive measurement harness — rule-based, no external calls
 ├── infra/               # Agent Terraform root (storage, lambda, eventbridge, SNS)
 │   ├── demo/            # Independent Terraform root — seed_leaks only
 │   └── modules/         # Reusable modules (storage, agent_lambda, notifications, …)
@@ -202,6 +202,9 @@ make typecheck     # mypy strict
 make test          # Unit tests only (fast, no AWS calls)
 make test-all      # Full suite with coverage report
 
+# Evals
+python evals/false_positive_rate.py   # Rule-based FP rate against fixtures
+
 # Infra
 make tf-init       # terraform init (agent infra)
 make tf-plan       # terraform plan
@@ -210,6 +213,9 @@ make tf-destroy    # terraform destroy
 make seed-demo     # Deploy intentional leak resources for demo
 make cleanup-demo  # Destroy demo leak resources
 ```
+
+> **Infracost** runs automatically on every PR that touches `infra/` — posts a cost diff comment.
+> Requires `INFRACOST_API_KEY` secret in GitHub repo settings (free at [cloud.infracost.io](https://cloud.infracost.io)).
 
 ---
 
