@@ -440,20 +440,27 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `aws_iam_role_policy_attachment` con managed policy `AWSLambdaBasicExecutionRole`, sin inline policies
 - NAT Gateway excluido — documentado con comment en ambos archivos
 
-### Fase 7: Documentación de la charla (Día 16-18)
+### ✅ Fase 7: Documentación de la charla (Día 16-18) — COMPLETA
 
-**Tareas:**
-- `docs/DEMO_SCRIPT.md`: guion minuto a minuto con backup plans si algo falla en vivo
-- `docs/COMPARISON.md`: tabla extensa DIY vs AWS DevOps Agent con citas
-- `docs/ARCHITECTURE.md`: versión extendida con diagramas (Mermaid o draw.io exportado a SVG)
-- `README.md` final con GIF demo + tabla de features + quickstart de 5 minutos
-- Crear 1-2 diagramas limpios con Excalidraw o Mermaid
-- Slides placeholder (fuera de repo, pero linkear desde README)
+**Tareas completadas:**
+- `docs/DEMO_SCRIPT.md`: guion minuto a minuto con 7 bloques + 5 planes de contingencia + checklist pre-demo
+- `docs/COMPARISON.md`: tabla DIY vs AWS managed tools vs FinOps Agent con análisis de costos
+- `docs/ARCHITECTURE.md`: arquitectura extendida con diagramas Mermaid (agent graph, infra, guardrails, tool registry)
+- `README.md`: build status actualizado, quickstart de 5 min, sección de docs, `make deploy/invoke/logs` en Development
+- `requirements-lambda.txt`: deps separadas para Lambda build (sin mcp, sin dev tools)
+- Makefile: targets `build`, `deploy`, `invoke`, `logs`
 
 **Criterios de aceptación:**
-- Un ingeniero externo puede clonar el repo, leer el README y desplegar en < 30 min
-- DEMO_SCRIPT es ejecutable paso a paso sin Diego presente
-- Documentación no tiene referencias rotas
+- Un ingeniero externo puede clonar el repo, leer el README y desplegar en < 30 min ✅
+- DEMO_SCRIPT es ejecutable paso a paso sin Diego presente ✅
+- Documentación no tiene referencias rotas ✅
+
+**Decisiones de implementación:**
+- `requirements-lambda.txt` separado del pyproject.toml — Lambda no necesita `mcp` ni dev deps
+- `make build` usa `--platform manylinux2014_x86_64 --only-binary=:all:` para compatibilidad desde macOS
+- `make invoke` escribe respuesta a `/tmp/finops_response.json` y la imprime formateada
+- `make logs` usa `aws logs tail --follow --format short` para stream en vivo durante demos
+- DEMO_SCRIPT cubre 7 bloques temáticos + 5 planes de contingencia (Bedrock timeout, cold start, credentials, Slack, seed)
 
 ### Fase 8: Hardening y polish (Día 19-20)
 
@@ -601,7 +608,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.7
-**Última actualización:** 2026-04-26
-**Fases completadas:** 0, 1, 2, 3, 4, 5, 6
-**Siguiente revisión:** después de completar Fase 7
+**Versión:** 1.8
+**Última actualización:** 2026-04-27
+**Fases completadas:** 0, 1, 2, 3, 4, 5, 6, 7
+**Siguiente revisión:** después de completar Fase 8
