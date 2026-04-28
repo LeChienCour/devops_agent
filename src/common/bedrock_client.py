@@ -20,7 +20,16 @@ from common.logger import get_logger
 
 logger = get_logger(__name__)
 
-_RETRYABLE_CODES = frozenset({"ThrottlingException", "ServiceUnavailableException"})
+_RETRYABLE_CODES = frozenset(
+    {
+        "ThrottlingException",
+        "ServiceUnavailableException",
+        "ModelStreamErrorException",
+        "ModelTimeoutException",
+        "InternalServerException",
+        "TooManyRequestsException",
+    }
+)
 
 
 def _is_retryable(exc: BaseException) -> bool:

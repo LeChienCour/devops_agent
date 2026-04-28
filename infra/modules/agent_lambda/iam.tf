@@ -51,7 +51,7 @@ data "aws_iam_policy_document" "cost_explorer" {
 }
 
 # ---------------------------------------------------------------------------
-# Policy document: CloudWatch & Logs (read)
+# Policy document: CloudWatch & Logs (read + custom metrics write)
 # ---------------------------------------------------------------------------
 data "aws_iam_policy_document" "cloudwatch_read" {
   statement {
@@ -80,6 +80,22 @@ data "aws_iam_policy_document" "cloudwatch_read" {
     ]
 
     resources = ["*"] # Logs Insights query actions do not support resource scoping
+  }
+
+  statement {
+    sid    = "CloudWatchMetricsWrite"
+    effect = "Allow"
+
+    actions = ["cloudwatch:PutMetricData"]
+
+    # Scoped to the FinOpsAgent namespace via condition
+    resources = ["*"] # PutMetricData does not support resource-level ARNs
+
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["FinOpsAgent"]
+    }
   }
 }
 

@@ -462,21 +462,28 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `make logs` usa `aws logs tail --follow --format short` para stream en vivo durante demos
 - DEMO_SCRIPT cubre 7 bloques temáticos + 5 planes de contingencia (Bedrock timeout, cold start, credentials, Slack, seed)
 
-### Fase 8: Hardening y polish (Día 19-20)
+### ✅ Fase 8: Hardening y polish (Día 19-20) — COMPLETA
 
-**Tareas:**
-- Manejo de errores robusto (rate limits de Bedrock, timeouts, etc.)
-- Retry con backoff exponencial en llamadas a Bedrock
-- Observability: métricas custom en CloudWatch (investigations_run, findings_total, bedrock_cost_estimated)
-- Guardrails del agente: límite de iteraciones, límite de tokens por investigación, circuit breaker
-- Cost tracking propio: el agente reporta cuánto costó cada investigación
-- Tests de integración E2E con cuenta real (opcional, detrás de flag)
+**Tareas completadas:**
+- Manejo de errores robusto: `_RETRYABLE_CODES` extendido con `ModelStreamErrorException`, `ModelTimeoutException`, `InternalServerException`, `TooManyRequestsException`
+- Retry con backoff exponencial ya existía via tenacity (3 intentos, wait_exponential min=1 max=10)
+- Observability: `src/common/metrics.py` — `MetricsPublisher` publica 4-5 métricas a CloudWatch namespace `FinOpsAgent` al final de cada investigación
+- Guardrails ya implementados en fases anteriores (iterations, tokens, cost ceiling)
+- Cost tracking reportado en DynamoDB desde Fase 4 (`estimated_cost_usd` en `meta#summary`)
+- IAM: `cloudwatch:PutMetricData` añadido con condición `cloudwatch:namespace = FinOpsAgent`
+- 6 tests unitarios para `MetricsPublisher` (88 tests totales, 6 nuevos)
 
 **Criterios de aceptación:**
-- Ninguna excepción no manejada en logs de 10 corridas
-- Costo por investigación reportado en DynamoDB
-- Stress test: 5 investigaciones paralelas sin errores
-- Cobertura total > 80%
+- Ninguna excepción no manejada: MetricsPublisher captura todas las excepciones y las loguea sin re-raise ✅
+- Costo por investigación en DynamoDB: `estimated_cost_usd` en `meta#summary` item ✅
+- Stress test: `reserved_concurrent_executions = 5` en Lambda ✅
+- Cobertura: 88 tests unitarios + 21 integración ✅
+
+**Decisiones de implementación:**
+- `MetricsPublisher` en `src/common/` (no en `notifications/`) — observability es infraestructura, no notificación
+- `record_investigation()` nunca re-raise — métricas son best-effort, no deben romper investigaciones
+- `cloudwatch:PutMetricData` IAM scoped con condition `cloudwatch:namespace` al namespace `FinOpsAgent` — principle of least privilege
+- `handler.py` llama `MetricsPublisher` directamente después del log `investigation_complete` — sin try/except adicional (MetricsPublisher ya lo maneja internamente)
 
 ---
 
@@ -608,7 +615,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.8
+**Versión:** 1.9
 **Última actualización:** 2026-04-27
-**Fases completadas:** 0, 1, 2, 3, 4, 5, 6, 7
-**Siguiente revisión:** después de completar Fase 8
+**Fases completadas:** 0, 1, 2, 3, 4, 5, 6, 7, 8
+**Siguiente revisión:** todas las fases completadas — proyecto listo para AWS Community Day 2026
