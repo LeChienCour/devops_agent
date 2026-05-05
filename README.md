@@ -266,6 +266,7 @@ make cleanup-demo  # Destroy demo leak resources
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Extended architecture — Mermaid diagrams, tool registry, data model, security |
 | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Live demo guide — minute-by-minute script, backup plans, pre-demo checklist |
 | [`docs/COMPARISON.md`](docs/COMPARISON.md) | DIY vs AWS managed tools vs FinOps Agent — cost and capability comparison |
+| [`docs/MCP_USAGE.md`](docs/MCP_USAGE.md) | Using tools interactively via Claude Code CLI + MCP — setup, prompts, troubleshooting |
 | [`docs/ADR/`](docs/ADR/) | Architecture Decision Records (MCP topology, DynamoDB schema, Lambda packaging) |
 
 ---

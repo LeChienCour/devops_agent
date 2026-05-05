@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "finops-security": {
+      "command": ".venv/bin/python",
+      "args": ["src/mcp_servers/security/server.py"],
+      "env": { "PYTHONPATH": "src" }
+    },
+    "finops-cost": {
+      "command": ".venv/bin/python",
+      "args": ["src/mcp_servers/cost_explorer/server.py"],
+      "env": { "PYTHONPATH": "src" }
+    },
+    "finops-cloudwatch": {
+      "command": ".venv/bin/python",
+      "args": ["src/mcp_servers/cloudwatch/server.py"],
+      "env": { "PYTHONPATH": "src" }
+    },
+    "finops-ec2": {
+      "command": ".venv/bin/python",
+      "args": ["src/mcp_servers/ec2_inventory/server.py"],
+      "env": { "PYTHONPATH": "src" }
+    },
+    "finops-trusted-advisor": {
+      "command": ".venv/bin/python",
+      "args": ["src/mcp_servers/trusted_advisor/server.py"],
+      "env": { "PYTHONPATH": "src" }
+    }
+  }
+}
