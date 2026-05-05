@@ -1,0 +1,75 @@
+{
+  "ssh_open_sg": {
+    "GroupId": "sg-0ssh123",
+    "GroupName": "open-ssh-sg",
+    "VpcId": "vpc-0abc123",
+    "Description": "Security group with SSH open to world",
+    "IpPermissions": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 22,
+        "ToPort": 22,
+        "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "all"}],
+        "Ipv6Ranges": []
+      }
+    ]
+  },
+  "mysql_open_sg": {
+    "GroupId": "sg-0mysql456",
+    "GroupName": "open-mysql-sg",
+    "VpcId": "vpc-0abc123",
+    "Description": "Security group with MySQL open to world",
+    "IpPermissions": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 3306,
+        "ToPort": 3306,
+        "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+        "Ipv6Ranges": []
+      }
+    ]
+  },
+  "all_traffic_sg": {
+    "GroupId": "sg-0all789",
+    "GroupName": "open-all-sg",
+    "VpcId": "vpc-0abc123",
+    "Description": "Security group allowing all traffic",
+    "IpPermissions": [
+      {
+        "IpProtocol": "-1",
+        "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+        "Ipv6Ranges": []
+      }
+    ]
+  },
+  "ipv6_ssh_sg": {
+    "GroupId": "sg-0ipv6abc",
+    "GroupName": "open-ssh-ipv6-sg",
+    "VpcId": "vpc-0abc123",
+    "Description": "Security group with SSH open via IPv6",
+    "IpPermissions": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 22,
+        "ToPort": 22,
+        "IpRanges": [],
+        "Ipv6Ranges": [{"CidrIpv6": "::/0"}]
+      }
+    ]
+  },
+  "restricted_sg": {
+    "GroupId": "sg-0safe999",
+    "GroupName": "restricted-sg",
+    "VpcId": "vpc-0abc123",
+    "Description": "Restricted security group",
+    "IpPermissions": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 22,
+        "ToPort": 22,
+        "IpRanges": [{"CidrIp": "10.0.0.0/8"}],
+        "Ipv6Ranges": []
+      }
+    ]
+  }
+}

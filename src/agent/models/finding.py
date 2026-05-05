@@ -39,6 +39,10 @@ class Finding(BaseModel):
 
     finding_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     finding_type: str
+    finding_category: str = Field(
+        default="cost",
+        description="'cost' for FinOps findings, 'security' for posture findings.",
+    )
     severity: Severity
     title: str
     description: str

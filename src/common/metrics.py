@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from common.aws_clients import get_client
@@ -52,7 +52,7 @@ class MetricsPublisher:
             bedrock_cost_usd: Estimated Bedrock spend for this run in USD.
             violations_count: Number of guardrail violations triggered.
         """
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         metric_data: list[dict[str, Any]] = [
             {
                 "MetricName": "investigations_run",

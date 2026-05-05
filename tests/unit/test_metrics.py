@@ -8,7 +8,7 @@ import pytest
 from botocore.exceptions import ClientError
 
 from common.config import AgentConfig
-from common.metrics import MetricsPublisher, _NAMESPACE
+from common.metrics import _NAMESPACE, MetricsPublisher
 
 
 @pytest.fixture()

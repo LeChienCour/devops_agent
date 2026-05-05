@@ -115,6 +115,7 @@ data "aws_iam_policy_document" "ec2_read" {
       "ec2:DescribeInstances",
       "ec2:DescribeVpcs",
       "ec2:DescribeSubnets",
+      "ec2:DescribeSecurityGroups",
     ]
 
     resources = ["*"] # All ec2:Describe* actions require "*" — no resource-level support
@@ -239,6 +240,131 @@ data "aws_iam_policy_document" "ssm_read" {
 }
 
 # ---------------------------------------------------------------------------
+# Policy document: GuardDuty (read)
+#
+# NOTE: guardduty:ListDetectors, ListFindings, and GetFindings do not support
+# resource-level ARN scoping.
+# Reference: https://docs.aws.amazon.com/guardduty/latest/ug/security_iam_service-with-iam.html
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "guardduty_read" {
+  statement {
+    sid    = "GuardDutyReadOnly"
+    effect = "Allow"
+
+    actions = [
+      "guardduty:ListDetectors",
+      "guardduty:ListFindings",
+      "guardduty:GetFindings",
+    ]
+
+    resources = ["*"] # tfsec:ignore:aws-iam-no-policy-wildcards
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Policy document: AWS Config (read)
+#
+# NOTE: config:DescribeComplianceByConfigRule and GetComplianceDetailsByConfigRule
+# do not support resource-level ARN scoping.
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "config_read" {
+  statement {
+    sid    = "ConfigReadOnly"
+    effect = "Allow"
+
+    actions = [
+      "config:DescribeComplianceByConfigRule",
+      "config:GetComplianceDetailsByConfigRule",
+      "config:DescribeConfigRules",
+      "config:DescribeConfigurationRecorders",
+      "config:DescribeConfigurationRecorderStatus",
+    ]
+
+    resources = ["*"] # tfsec:ignore:aws-iam-no-policy-wildcards
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Policy document: IAM Access Analyzer (read)
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "access_analyzer_read" {
+  statement {
+    sid    = "AccessAnalyzerReadOnly"
+    effect = "Allow"
+
+    actions = [
+      "access-analyzer:ListAnalyzers",
+      "access-analyzer:ListFindings",
+      "access-analyzer:GetFinding",
+    ]
+
+    resources = ["*"] # tfsec:ignore:aws-iam-no-policy-wildcards
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Policy document: Security Hub (read)
+#
+# NOTE: securityhub:GetFindings does not support resource-level ARN constraints.
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "security_hub_read" {
+  statement {
+    sid    = "SecurityHubReadOnly"
+    effect = "Allow"
+
+    actions = [
+      "securityhub:GetFindings",
+      "securityhub:DescribeHub",
+    ]
+
+    resources = ["*"] # tfsec:ignore:aws-iam-no-policy-wildcards
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Policy document: CloudTrail (read)
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "cloudtrail_read" {
+  statement {
+    sid    = "CloudTrailReadOnly"
+    effect = "Allow"
+
+    actions = [
+      "cloudtrail:DescribeTrails",
+      "cloudtrail:GetTrailStatus",
+      "cloudtrail:GetEventSelectors",
+    ]
+
+    resources = ["*"] # tfsec:ignore:aws-iam-no-policy-wildcards
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Policy document: IAM credential audit (read)
+#
+# IAM is a global service. generate/get_credential_report and GetAccountSummary
+# do not support resource-level ARN scoping.
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "iam_audit_read" {
+  statement {
+    sid    = "IAMAuditReadOnly"
+    effect = "Allow"
+
+    actions = [
+      "iam:GetAccountSummary",
+      "iam:GenerateCredentialReport",
+      "iam:GetCredentialReport",
+      "iam:ListUsers",
+      "iam:ListMFADevices",
+      "iam:ListAccessKeys",
+      "iam:GetAccessKeyLastUsed",
+    ]
+
+    resources = ["*"] # tfsec:ignore:aws-iam-no-policy-wildcards
+  }
+}
+
+# ---------------------------------------------------------------------------
 # SQS DLQ send message permission
 # ---------------------------------------------------------------------------
 data "aws_iam_policy_document" "sqs_dlq" {
@@ -267,6 +393,12 @@ data "aws_iam_policy_document" "lambda_combined" {
     data.aws_iam_policy_document.sns_publish.json,
     data.aws_iam_policy_document.ssm_read.json,
     data.aws_iam_policy_document.sqs_dlq.json,
+    data.aws_iam_policy_document.guardduty_read.json,
+    data.aws_iam_policy_document.config_read.json,
+    data.aws_iam_policy_document.access_analyzer_read.json,
+    data.aws_iam_policy_document.security_hub_read.json,
+    data.aws_iam_policy_document.cloudtrail_read.json,
+    data.aws_iam_policy_document.iam_audit_read.json,
   ]
 }
 

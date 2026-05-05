@@ -1,0 +1,30 @@
+{
+  "multi_region_trail": {
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:123456789012:trail/MyMultiRegionTrail",
+    "Name": "MyMultiRegionTrail",
+    "IsMultiRegionTrail": true,
+    "LogFileValidationEnabled": true,
+    "S3BucketName": "my-cloudtrail-bucket",
+    "CloudWatchLogsLogGroupArn": "arn:aws:logs:us-east-1:123456789012:log-group:CloudTrail/DefaultLogGroup:*",
+    "HomeRegion": "us-east-1"
+  },
+  "single_region_trail_no_validation": {
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:123456789012:trail/MySingleRegionTrail",
+    "Name": "MySingleRegionTrail",
+    "IsMultiRegionTrail": false,
+    "LogFileValidationEnabled": false,
+    "S3BucketName": "my-single-cloudtrail-bucket",
+    "CloudWatchLogsLogGroupArn": null,
+    "HomeRegion": "us-east-1"
+  },
+  "trail_status_active": {
+    "IsLogging": true,
+    "LatestDeliveryTime": "2026-05-02T10:00:00Z",
+    "LatestDeliveryError": null
+  },
+  "trail_status_stopped": {
+    "IsLogging": false,
+    "LatestDeliveryTime": "2026-04-01T10:00:00Z",
+    "LatestDeliveryError": "No S3 bucket policy"
+  }
+}

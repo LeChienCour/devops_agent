@@ -1,0 +1,35 @@
+{
+  "high_finding": {
+    "Id": "arn:aws:securityhub:us-east-1:123456789012:subscription/aws-foundational-security/v/1.0.0/EC2.19/finding/abc123",
+    "Title": "Security groups should not allow unrestricted access to high-risk ports",
+    "Description": "Security group sg-0abc123 allows unrestricted inbound traffic on port 22.",
+    "Severity": {"Label": "HIGH", "Normalized": 70},
+    "ProductArn": "arn:aws:securityhub:us-east-1::product/aws/securityhub",
+    "Resources": [{"Id": "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0abc123", "Type": "AwsEc2SecurityGroup"}],
+    "RecordState": "ACTIVE",
+    "WorkflowStatus": "NEW",
+    "UpdatedAt": "2026-05-02T10:00:00Z"
+  },
+  "critical_finding": {
+    "Id": "arn:aws:securityhub:us-east-1:123456789012:subscription/aws-foundational-security/v/1.0.0/IAM.6/finding/def456",
+    "Title": "Hardware MFA should be enabled for the root user",
+    "Description": "The root user of the AWS account does not have a hardware MFA device enabled.",
+    "Severity": {"Label": "CRITICAL", "Normalized": 90},
+    "ProductArn": "arn:aws:securityhub:us-east-1::product/aws/securityhub",
+    "Resources": [{"Id": "arn:aws:iam::123456789012:root", "Type": "AwsIamUser"}],
+    "RecordState": "ACTIVE",
+    "WorkflowStatus": "NEW",
+    "UpdatedAt": "2026-05-02T10:00:00Z"
+  },
+  "medium_finding": {
+    "Id": "arn:aws:securityhub:us-east-1:123456789012:subscription/aws-foundational-security/v/1.0.0/S3.5/finding/ghi789",
+    "Title": "S3 buckets should require requests to use SSL",
+    "Description": "Bucket my-bucket does not have a bucket policy that denies HTTP requests.",
+    "Severity": {"Label": "MEDIUM", "Normalized": 40},
+    "ProductArn": "arn:aws:securityhub:us-east-1::product/aws/securityhub",
+    "Resources": [{"Id": "arn:aws:s3:::my-bucket", "Type": "AwsS3Bucket"}],
+    "RecordState": "ACTIVE",
+    "WorkflowStatus": "NEW",
+    "UpdatedAt": "2026-05-02T10:00:00Z"
+  }
+}

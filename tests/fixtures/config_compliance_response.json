@@ -1,0 +1,23 @@
+{
+  "noncompliant_rules": [
+    {"ConfigRuleName": "restricted-ssh", "Compliance": {"ComplianceType": "NON_COMPLIANT"}},
+    {"ConfigRuleName": "s3-bucket-public-read-prohibited", "Compliance": {"ComplianceType": "NON_COMPLIANT"}}
+  ],
+  "compliant_rules": [
+    {"ConfigRuleName": "iam-password-policy", "Compliance": {"ComplianceType": "COMPLIANT"}}
+  ],
+  "rule_details": {
+    "restricted-ssh": {
+      "EvaluationResults": [
+        {
+          "EvaluationResultIdentifier": {
+            "EvaluationResultQualifier": {
+              "ResourceType": "AWS::EC2::SecurityGroup",
+              "ResourceId": "sg-0abc123"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
