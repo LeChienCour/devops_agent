@@ -485,6 +485,41 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `cloudwatch:PutMetricData` IAM scoped con condition `cloudwatch:namespace` al namespace `FinOpsAgent` — principle of least privilege
 - `handler.py` llama `MetricsPublisher` directamente después del log `investigation_complete` — sin try/except adicional (MetricsPublisher ya lo maneja internamente)
 
+### ✅ Fase 9: Security Posture Agent (Día 21) — COMPLETA
+
+**Tareas completadas:**
+- `src/agent/tools/security.py` — 7 herramientas de auditoría de seguridad AWS
+- `src/mcp_servers/security/server.py` — wrapper FastMCP para demo/CLI (consistente con otros módulos)
+- `src/agent/tools/__init__.py` — 7 entradas nuevas en TOOL_REGISTRY + ALL_TOOLS (19 herramientas total)
+- `src/agent/models/finding.py` — campo `finding_category: str = "cost"` (backward-compatible)
+- `infra/modules/agent_lambda/iam.tf` — 6 nuevos bloques IAM + `ec2:DescribeSecurityGroups`
+- 7 fixtures de prueba (JSON + CSV) en `tests/fixtures/`
+- 37 tests unitarios nuevos (125 total)
+
+**Herramientas implementadas:**
+
+| Herramienta | Servicio AWS | Detecta |
+|---|---|---|
+| `list_guardduty_findings` | GuardDuty | Amenazas activas HIGH/CRITICAL |
+| `list_config_noncompliant_rules` | AWS Config | Reglas NO_COMPLIANT + recursos afectados |
+| `list_iam_analyzer_findings` | IAM Access Analyzer | Acceso externo a roles/S3/KMS |
+| `list_security_hub_findings` | Security Hub | Agregación multi-fuente (GuardDuty + Inspector + más) |
+| `get_cloudtrail_status` | CloudTrail | Trails no configurados, sin logging, sin validación |
+| `list_open_security_groups` | EC2 | SGs con 0.0.0.0/0 en puertos críticos (SSH/RDP/DB) |
+| `list_iam_credential_issues` | IAM (global) | Root MFA, root access key, usuarios sin MFA, claves viejas |
+
+**Criterios de aceptación:**
+- Fallback graceful para servicios no habilitados (sin excepción, con `warning` en respuesta) ✅
+- IAM global con patrón `# noqa: ARG001`, consistente con `trusted_advisor.py` ✅
+- Valores notionales de riesgo USD para pasar filtro `cost_threshold_usd` en `recommend_node` ✅
+- 6 nuevos bloques IAM en `iam.tf` + `ec2:DescribeSecurityGroups` en bloque existente ✅
+- `make lint`, `make typecheck`, `make test` pasan sin errores ✅
+
+**Decisiones de implementación:**
+- Valores notionales USD (no costo real): GuardDuty CRITICAL=$500, IAM root=$500, SG crítico=$300, etc. — permite que `recommend_node` filtre y ordene por riesgo relativo sin cambios al modelo
+- `finding_category` field con default `"cost"` — backward-compatible, permite filtros por categoría en DynamoDB/Slack sin romper findings existentes
+- MCP wrapper creado para consistencia con los 4 módulos existentes — `mcp dev src/mcp_servers/security/server.py` funciona como los demás para demos interactivos
+
 ---
 
 ## 6. Escenarios de Demo (Fuentes de Fuga)
@@ -615,7 +650,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.9
-**Última actualización:** 2026-04-27
-**Fases completadas:** 0, 1, 2, 3, 4, 5, 6, 7, 8
+**Versión:** 2.0
+**Última actualización:** 2026-05-04
+**Fases completadas:** 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 **Siguiente revisión:** todas las fases completadas — proyecto listo para AWS Community Day 2026

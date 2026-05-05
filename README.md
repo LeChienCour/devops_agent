@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
-> **Build status:** Phases 0–8 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator, demo leak seeding, talk documentation, CloudWatch metrics + hardening. **Ready for AWS Community Day 2026.**
+> **Build status:** Phases 0–9 complete — repo setup, Terraform infra, LangGraph agent core, 19 AWS tools + MCP wrappers (12 FinOps + 7 Security), DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator, demo leak seeding, talk documentation, CloudWatch metrics + hardening, Security Posture Agent. **Ready for AWS Community Day 2026.**
 
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 
@@ -87,8 +87,9 @@ Guardrails enforced at every loop: max iterations (5), max tokens (50k), Bedrock
 
 ## Features
 
-The agent detects eight categories of AWS cost waste, each producing a structured finding with
-severity, estimated monthly impact in USD, remediation command/IaC, and LLM-generated context.
+### FinOps — Cost Waste Detection (12 tools)
+
+Eight categories of AWS cost waste. Each finding includes severity, estimated monthly impact in USD, remediation command/IaC, and LLM-generated context.
 
 | # | Leak Type                     | Detection Signal                                   | Typical Saving/Month |
 |---|-------------------------------|----------------------------------------------------|----------------------|
@@ -100,6 +101,20 @@ severity, estimated monthly impact in USD, remediation command/IaC, and LLM-gene
 | 6 | Lambda oversized memory       | CloudWatch Insights: max_used / allocated < 40%   | 40–70% of Lambda cost|
 | 7 | Log Groups without retention  | `describe-log-groups` retentionInDays=null         | $0.03 / GB / month   |
 | 8 | Stopped EC2 + attached EBS    | `describe-instances` state=stopped + age > 30 d   | Cost of attached EBS |
+
+### Security Posture (7 tools — Phase 9)
+
+Seven security audit tools. Findings use notional risk USD values so they surface alongside cost findings in the same pipeline.
+
+| # | Check                          | Service              | Detection Signal                           |
+|---|--------------------------------|----------------------|--------------------------------------------|
+| 1 | Active threat findings         | GuardDuty            | HIGH/CRITICAL severity findings            |
+| 2 | Compliance violations          | AWS Config           | Rules with NON_COMPLIANT resources         |
+| 3 | External resource access       | IAM Access Analyzer  | Roles/S3/KMS accessible outside account   |
+| 4 | Aggregated security findings   | Security Hub         | Multi-source HIGH/CRITICAL findings        |
+| 5 | CloudTrail gaps                | CloudTrail           | Trails missing, not logging, no validation |
+| 6 | Open security groups           | EC2                  | 0.0.0.0/0 on SSH (22), RDP (3389), DB ports|
+| 7 | IAM credential hygiene         | IAM                  | Root MFA off, root keys, stale access keys |
 
 ---
 

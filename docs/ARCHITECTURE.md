@@ -88,24 +88,40 @@ flowchart TB
 
 ## Tool Registry
 
-The 12 in-process tools available to the agent during `gather_node`:
+The 19 in-process tools available to the agent during `gather_node`:
+
+### FinOps Tools (cost waste detection)
 
 | Module | Tool | AWS API | Purpose |
 |---|---|---|---|
-| `cost_explorer.py` | `get_cost_and_usage` | Cost Explorer | Monthly spend by service |
-| `cost_explorer.py` | `get_cost_anomaly_detection` | Cost Explorer | Anomaly detection results |
+| `cost_explorer.py` | `get_cost_by_service` | Cost Explorer | Monthly spend by service |
+| `cost_explorer.py` | `get_cost_anomalies` | Cost Explorer | Anomaly detection results |
+| `cost_explorer.py` | `get_cost_forecast` | Cost Explorer | Spend forecast |
 | `cloudwatch.py` | `get_metric_statistics` | CloudWatch | NAT GW / Lambda metrics |
-| `cloudwatch.py` | `get_log_groups_without_retention` | CloudWatch Logs | Log groups missing retention |
+| `cloudwatch.py` | `get_cloudwatch_insights` | CloudWatch Logs Insights | Lambda memory utilization |
+| `cloudwatch.py` | `list_log_groups_without_retention` | CloudWatch Logs | Log groups missing retention |
 | `ec2_inventory.py` | `list_unattached_ebs_volumes` | EC2 | Volumes in state=available |
 | `ec2_inventory.py` | `list_unassociated_eips` | EC2 | EIPs with no InstanceId |
 | `ec2_inventory.py` | `list_stopped_instances` | EC2 | Instances stopped >30 days |
-| `ec2_inventory.py` | `list_gp2_volumes` | EC2 | Volumes with type=gp2 |
 | `ec2_inventory.py` | `list_old_snapshots` | EC2 | Snapshots >90 days |
-| `ec2_inventory.py` | `list_nat_gateways` | EC2 | NAT GW inventory |
-| `ec2_inventory.py` | `list_oversized_lambdas` | CloudWatch Insights | Lambda memory utilization |
-| `trusted_advisor.py` | `get_trusted_advisor_checks` | Support API | TA cost checks |
+| `ec2_inventory.py` | `list_idle_nat_gateways` | EC2 + CloudWatch | NAT GW with no traffic |
+| `trusted_advisor.py` | `list_cost_optimization_checks` | Support API | TA cost checks |
+
+### Security Posture Tools (Phase 9)
+
+| Module | Tool | AWS API | Detects |
+|---|---|---|---|
+| `security.py` | `list_guardduty_findings` | GuardDuty | Active HIGH/CRITICAL threats |
+| `security.py` | `list_config_noncompliant_rules` | AWS Config | Non-compliant rules + resources |
+| `security.py` | `list_iam_analyzer_findings` | IAM Access Analyzer | External access to roles/S3/KMS |
+| `security.py` | `list_security_hub_findings` | Security Hub | Aggregated multi-source findings |
+| `security.py` | `get_cloudtrail_status` | CloudTrail | Logging gaps, validation disabled |
+| `security.py` | `list_open_security_groups` | EC2 | 0.0.0.0/0 on SSH/RDP/DB ports |
+| `security.py` | `list_iam_credential_issues` | IAM (global) | Root MFA, stale keys, users without MFA |
 
 **All tools are read-only.** No write/mutating AWS permissions in Lambda IAM role (enforced by policy).
+
+**Security findings use notional risk USD values** (not direct cost) so the `recommend_node` cost-threshold filter still works: GuardDuty CRITICAL=$500, root MFA disabled=$500, open SG CRITICAL port=$300, etc.
 
 ---
 
@@ -178,13 +194,15 @@ stateDiagram-v2
 
 | Control | Implementation |
 |---|---|
-| IAM least privilege | Lambda role has `ec2:Describe*`, `cloudwatch:Get*`, `ce:Get*` only — no write permissions |
+| IAM least privilege | Lambda role scoped to specific actions per service — no `*:*` grants, no write permissions |
+| Security scanning | GuardDuty, Config, IAM Analyzer, Security Hub, CloudTrail, SG audit (Phase 9) |
 | Secrets management | SSM Parameter Store at cold-start; no secrets in env vars or code |
-| Network isolation | Lambda NOT in VPC (zero NAT cost); Security Groups not applicable |
+| Network isolation | Lambda NOT in VPC (zero NAT cost) |
 | Bedrock response logging | Response bodies NOT logged (may contain account data) |
 | DynamoDB encryption | AWS-managed KMS key (default) |
 | SQS DLQ | Encrypted with SQS-managed SSE |
 | GitHub token scope | `repo:read` only for GitHub MCP server |
+| CloudTrail | Monitored by `get_cloudtrail_status` — gaps flagged as findings |
 
 ---
 
