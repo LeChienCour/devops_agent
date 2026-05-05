@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent.tools import cloudwatch, cost_explorer, ec2_inventory, trusted_advisor
+from agent.tools import cloudwatch, cost_explorer, ec2_inventory, security, trusted_advisor
 
 # Maps tool name → (module, callable).
 # The gather node uses this to dispatch calls without a long if/elif chain.
@@ -44,11 +44,23 @@ TOOL_REGISTRY: dict[str, tuple[Any, ...]] = {
         trusted_advisor,
         trusted_advisor.list_cost_optimization_checks,
     ),
+    # security
+    "list_guardduty_findings": (security, security.list_guardduty_findings),
+    "list_config_noncompliant_rules": (security, security.list_config_noncompliant_rules),
+    "list_iam_analyzer_findings": (security, security.list_iam_analyzer_findings),
+    "list_security_hub_findings": (security, security.list_security_hub_findings),
+    "get_cloudtrail_status": (security, security.get_cloudtrail_status),
+    "list_open_security_groups": (security, security.list_open_security_groups),
+    "list_iam_credential_issues": (security, security.list_iam_credential_issues),
 }
 
 # Combined Bedrock tool_use schema list passed to the plan node prompt.
 ALL_TOOLS: list[dict[str, Any]] = (
-    cost_explorer.TOOLS + cloudwatch.TOOLS + ec2_inventory.TOOLS + trusted_advisor.TOOLS
+    cost_explorer.TOOLS
+    + cloudwatch.TOOLS
+    + ec2_inventory.TOOLS
+    + trusted_advisor.TOOLS
+    + security.TOOLS
 )
 
 __all__ = ["ALL_TOOLS", "TOOL_REGISTRY"]

@@ -117,3 +117,71 @@ cleanup-demo: ## Destroy demo leak resources (leaves agent infra untouched)
 	@echo "Destroying seed_leaks resources..."
 	terraform -chdir=$(DEMO_DIR) destroy $(TF_VARS)
 	@echo "Demo resources cleaned up."
+
+# ---------------------------------------------------------------------------
+# Lambda build & deploy
+# ---------------------------------------------------------------------------
+DEPLOY_ENV     ?= dev
+DEPLOY_REGION  ?= us-east-1
+PROJECT_NAME   ?= finops-agent
+FUNCTION_NAME  ?= $(PROJECT_NAME)-agent-$(DEPLOY_ENV)
+BUILD_DIR      := dist/lambda_package
+LAMBDA_ZIP     := dist/lambda.zip
+
+.PHONY: build
+build: ## Build Lambda deployment zip (Linux-compatible wheels via --platform)
+	@echo "Building Lambda package..."
+	rm -rf $(BUILD_DIR) $(LAMBDA_ZIP)
+	mkdir -p $(BUILD_DIR)
+	@echo "Installing dependencies (manylinux2014_x86_64)..."
+	python -m pip install \
+		--platform manylinux2014_x86_64 \
+		--target $(BUILD_DIR) \
+		--implementation cp \
+		--python-version 312 \
+		--only-binary=:all: \
+		--quiet \
+		-r requirements-lambda.txt
+	@echo "Copying source modules..."
+	cp -r src/agent          $(BUILD_DIR)/agent
+	cp -r src/common         $(BUILD_DIR)/common
+	cp -r src/notifications  $(BUILD_DIR)/notifications
+	@echo "Zipping..."
+	cd $(BUILD_DIR) && zip -qr ../../$(LAMBDA_ZIP) . \
+		--exclude "*.pyc" --exclude "*/__pycache__/*" --exclude "*.dist-info/*"
+	@echo "Done: $(LAMBDA_ZIP) ($$(du -sh $(LAMBDA_ZIP) | cut -f1))"
+
+.PHONY: deploy
+deploy: build ## Build Lambda zip and upload to AWS (DEPLOY_ENV=dev DEPLOY_REGION=us-east-1)
+	@echo "Deploying $(LAMBDA_ZIP) → $(FUNCTION_NAME) [$(DEPLOY_REGION)]..."
+	aws lambda update-function-code \
+		--function-name $(FUNCTION_NAME) \
+		--zip-file fileb://$(LAMBDA_ZIP) \
+		--region $(DEPLOY_REGION) \
+		--no-cli-pager
+	@echo "Waiting for update to complete..."
+	aws lambda wait function-updated \
+		--function-name $(FUNCTION_NAME) \
+		--region $(DEPLOY_REGION)
+	@echo "Deploy complete. Run 'make invoke' to trigger an investigation."
+
+.PHONY: invoke
+invoke: ## Trigger an on-demand investigation on the deployed Lambda
+	@echo "Invoking $(FUNCTION_NAME)..."
+	@aws lambda invoke \
+		--function-name $(FUNCTION_NAME) \
+		--payload '{"trigger": "on_demand"}' \
+		--cli-binary-format raw-in-base64-out \
+		--region $(DEPLOY_REGION) \
+		--no-cli-pager \
+		/tmp/finops_response.json
+	@echo ""
+	@echo "--- Response ---"
+	@python3 -m json.tool /tmp/finops_response.json
+
+.PHONY: logs
+logs: ## Tail CloudWatch logs for the Lambda function (live stream)
+	aws logs tail /aws/lambda/$(FUNCTION_NAME) \
+		--follow \
+		--region $(DEPLOY_REGION) \
+		--format short

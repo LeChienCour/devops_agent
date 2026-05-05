@@ -13,6 +13,7 @@ from agent.guardrails import GuardrailsState
 from agent.state import AgentState
 from common.config import AgentConfig
 from common.logger import get_logger
+from common.metrics import MetricsPublisher
 
 logger = get_logger(__name__)
 
@@ -79,6 +80,14 @@ async def _run_investigation(event: dict[str, Any]) -> dict[str, Any]:
         bedrock_cost_usd=guardrails.estimated_cost_usd,
         iterations=guardrails.iterations,
         guardrail_violations=len(guardrails.violations),
+    )
+
+    MetricsPublisher(agent_config).record_investigation(
+        investigation_id=investigation_id,
+        findings_count=findings_count,
+        total_savings_usd=total_savings,
+        bedrock_cost_usd=guardrails.estimated_cost_usd,
+        violations_count=len(guardrails.violations),
     )
 
     return {

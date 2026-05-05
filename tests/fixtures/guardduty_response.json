@@ -1,0 +1,37 @@
+{
+  "detector_ids": ["abc123detector"],
+  "critical_finding": {
+    "AccountId": "123456789012",
+    "Arn": "arn:aws:guardduty:us-east-1:123456789012:detector/abc123detector/finding/def456crit",
+    "Id": "def456crit",
+    "Type": "Backdoor:EC2/C&CActivity.B",
+    "Severity": 7.0,
+    "Title": "Command and Control server contacted",
+    "Description": "EC2 instance i-0abc123 contacted a known C&C server.",
+    "Region": "us-east-1",
+    "CreatedAt": "2026-05-01T10:00:00Z",
+    "UpdatedAt": "2026-05-02T10:00:00Z",
+    "Resource": {
+      "ResourceType": "Instance",
+      "InstanceDetails": {"InstanceId": "i-0abc123"}
+    },
+    "Service": {"Archived": false}
+  },
+  "high_finding": {
+    "AccountId": "123456789012",
+    "Arn": "arn:aws:guardduty:us-east-1:123456789012:detector/abc123detector/finding/ghi789high",
+    "Id": "ghi789high",
+    "Type": "Recon:EC2/PortProbeUnprotectedPort",
+    "Severity": 5.0,
+    "Title": "Unprotected port probed",
+    "Description": "EC2 instance has an unprotected port that was probed.",
+    "Region": "us-east-1",
+    "CreatedAt": "2026-05-01T12:00:00Z",
+    "UpdatedAt": "2026-05-02T12:00:00Z",
+    "Resource": {
+      "ResourceType": "Instance",
+      "InstanceDetails": {"InstanceId": "i-0def456"}
+    },
+    "Service": {"Archived": false}
+  }
+}

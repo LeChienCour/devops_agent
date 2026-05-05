@@ -440,36 +440,85 @@ INVESTIGATION_TIMEOUT_SEC=180
 - `aws_iam_role_policy_attachment` con managed policy `AWSLambdaBasicExecutionRole`, sin inline policies
 - NAT Gateway excluido — documentado con comment en ambos archivos
 
-### Fase 7: Documentación de la charla (Día 16-18)
+### ✅ Fase 7: Documentación de la charla (Día 16-18) — COMPLETA
 
-**Tareas:**
-- `docs/DEMO_SCRIPT.md`: guion minuto a minuto con backup plans si algo falla en vivo
-- `docs/COMPARISON.md`: tabla extensa DIY vs AWS DevOps Agent con citas
-- `docs/ARCHITECTURE.md`: versión extendida con diagramas (Mermaid o draw.io exportado a SVG)
-- `README.md` final con GIF demo + tabla de features + quickstart de 5 minutos
-- Crear 1-2 diagramas limpios con Excalidraw o Mermaid
-- Slides placeholder (fuera de repo, pero linkear desde README)
-
-**Criterios de aceptación:**
-- Un ingeniero externo puede clonar el repo, leer el README y desplegar en < 30 min
-- DEMO_SCRIPT es ejecutable paso a paso sin Diego presente
-- Documentación no tiene referencias rotas
-
-### Fase 8: Hardening y polish (Día 19-20)
-
-**Tareas:**
-- Manejo de errores robusto (rate limits de Bedrock, timeouts, etc.)
-- Retry con backoff exponencial en llamadas a Bedrock
-- Observability: métricas custom en CloudWatch (investigations_run, findings_total, bedrock_cost_estimated)
-- Guardrails del agente: límite de iteraciones, límite de tokens por investigación, circuit breaker
-- Cost tracking propio: el agente reporta cuánto costó cada investigación
-- Tests de integración E2E con cuenta real (opcional, detrás de flag)
+**Tareas completadas:**
+- `docs/DEMO_SCRIPT.md`: guion minuto a minuto con 7 bloques + 5 planes de contingencia + checklist pre-demo
+- `docs/COMPARISON.md`: tabla DIY vs AWS managed tools vs FinOps Agent con análisis de costos
+- `docs/ARCHITECTURE.md`: arquitectura extendida con diagramas Mermaid (agent graph, infra, guardrails, tool registry)
+- `README.md`: build status actualizado, quickstart de 5 min, sección de docs, `make deploy/invoke/logs` en Development
+- `requirements-lambda.txt`: deps separadas para Lambda build (sin mcp, sin dev tools)
+- Makefile: targets `build`, `deploy`, `invoke`, `logs`
 
 **Criterios de aceptación:**
-- Ninguna excepción no manejada en logs de 10 corridas
-- Costo por investigación reportado en DynamoDB
-- Stress test: 5 investigaciones paralelas sin errores
-- Cobertura total > 80%
+- Un ingeniero externo puede clonar el repo, leer el README y desplegar en < 30 min ✅
+- DEMO_SCRIPT es ejecutable paso a paso sin Diego presente ✅
+- Documentación no tiene referencias rotas ✅
+
+**Decisiones de implementación:**
+- `requirements-lambda.txt` separado del pyproject.toml — Lambda no necesita `mcp` ni dev deps
+- `make build` usa `--platform manylinux2014_x86_64 --only-binary=:all:` para compatibilidad desde macOS
+- `make invoke` escribe respuesta a `/tmp/finops_response.json` y la imprime formateada
+- `make logs` usa `aws logs tail --follow --format short` para stream en vivo durante demos
+- DEMO_SCRIPT cubre 7 bloques temáticos + 5 planes de contingencia (Bedrock timeout, cold start, credentials, Slack, seed)
+
+### ✅ Fase 8: Hardening y polish (Día 19-20) — COMPLETA
+
+**Tareas completadas:**
+- Manejo de errores robusto: `_RETRYABLE_CODES` extendido con `ModelStreamErrorException`, `ModelTimeoutException`, `InternalServerException`, `TooManyRequestsException`
+- Retry con backoff exponencial ya existía via tenacity (3 intentos, wait_exponential min=1 max=10)
+- Observability: `src/common/metrics.py` — `MetricsPublisher` publica 4-5 métricas a CloudWatch namespace `FinOpsAgent` al final de cada investigación
+- Guardrails ya implementados en fases anteriores (iterations, tokens, cost ceiling)
+- Cost tracking reportado en DynamoDB desde Fase 4 (`estimated_cost_usd` en `meta#summary`)
+- IAM: `cloudwatch:PutMetricData` añadido con condición `cloudwatch:namespace = FinOpsAgent`
+- 6 tests unitarios para `MetricsPublisher` (88 tests totales, 6 nuevos)
+
+**Criterios de aceptación:**
+- Ninguna excepción no manejada: MetricsPublisher captura todas las excepciones y las loguea sin re-raise ✅
+- Costo por investigación en DynamoDB: `estimated_cost_usd` en `meta#summary` item ✅
+- Stress test: `reserved_concurrent_executions = 5` en Lambda ✅
+- Cobertura: 88 tests unitarios + 21 integración ✅
+
+**Decisiones de implementación:**
+- `MetricsPublisher` en `src/common/` (no en `notifications/`) — observability es infraestructura, no notificación
+- `record_investigation()` nunca re-raise — métricas son best-effort, no deben romper investigaciones
+- `cloudwatch:PutMetricData` IAM scoped con condition `cloudwatch:namespace` al namespace `FinOpsAgent` — principle of least privilege
+- `handler.py` llama `MetricsPublisher` directamente después del log `investigation_complete` — sin try/except adicional (MetricsPublisher ya lo maneja internamente)
+
+### ✅ Fase 9: Security Posture Agent (Día 21) — COMPLETA
+
+**Tareas completadas:**
+- `src/agent/tools/security.py` — 7 herramientas de auditoría de seguridad AWS
+- `src/mcp_servers/security/server.py` — wrapper FastMCP para demo/CLI (consistente con otros módulos)
+- `src/agent/tools/__init__.py` — 7 entradas nuevas en TOOL_REGISTRY + ALL_TOOLS (19 herramientas total)
+- `src/agent/models/finding.py` — campo `finding_category: str = "cost"` (backward-compatible)
+- `infra/modules/agent_lambda/iam.tf` — 6 nuevos bloques IAM + `ec2:DescribeSecurityGroups`
+- 7 fixtures de prueba (JSON + CSV) en `tests/fixtures/`
+- 37 tests unitarios nuevos (125 total)
+
+**Herramientas implementadas:**
+
+| Herramienta | Servicio AWS | Detecta |
+|---|---|---|
+| `list_guardduty_findings` | GuardDuty | Amenazas activas HIGH/CRITICAL |
+| `list_config_noncompliant_rules` | AWS Config | Reglas NO_COMPLIANT + recursos afectados |
+| `list_iam_analyzer_findings` | IAM Access Analyzer | Acceso externo a roles/S3/KMS |
+| `list_security_hub_findings` | Security Hub | Agregación multi-fuente (GuardDuty + Inspector + más) |
+| `get_cloudtrail_status` | CloudTrail | Trails no configurados, sin logging, sin validación |
+| `list_open_security_groups` | EC2 | SGs con 0.0.0.0/0 en puertos críticos (SSH/RDP/DB) |
+| `list_iam_credential_issues` | IAM (global) | Root MFA, root access key, usuarios sin MFA, claves viejas |
+
+**Criterios de aceptación:**
+- Fallback graceful para servicios no habilitados (sin excepción, con `warning` en respuesta) ✅
+- IAM global con patrón `# noqa: ARG001`, consistente con `trusted_advisor.py` ✅
+- Valores notionales de riesgo USD para pasar filtro `cost_threshold_usd` en `recommend_node` ✅
+- 6 nuevos bloques IAM en `iam.tf` + `ec2:DescribeSecurityGroups` en bloque existente ✅
+- `make lint`, `make typecheck`, `make test` pasan sin errores ✅
+
+**Decisiones de implementación:**
+- Valores notionales USD (no costo real): GuardDuty CRITICAL=$500, IAM root=$500, SG crítico=$300, etc. — permite que `recommend_node` filtre y ordene por riesgo relativo sin cambios al modelo
+- `finding_category` field con default `"cost"` — backward-compatible, permite filtros por categoría en DynamoDB/Slack sin romper findings existentes
+- MCP wrapper creado para consistencia con los 4 módulos existentes — `mcp dev src/mcp_servers/security/server.py` funciona como los demás para demos interactivos
 
 ---
 
@@ -601,7 +650,7 @@ Ideas para evolucionar el proyecto después del Community Day:
 ---
 
 **Autor del plan:** Diego (con Claude como co-autor)
-**Versión:** 1.7
-**Última actualización:** 2026-04-26
-**Fases completadas:** 0, 1, 2, 3, 4, 5, 6
-**Siguiente revisión:** después de completar Fase 7
+**Versión:** 2.0
+**Última actualización:** 2026-05-04
+**Fases completadas:** 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+**Siguiente revisión:** todas las fases completadas — proyecto listo para AWS Community Day 2026

@@ -1,0 +1,32 @@
+{
+  "analyzers": [
+    {
+      "arn": "arn:aws:access-analyzer:us-east-1:123456789012:analyzer/MyAnalyzer",
+      "name": "MyAnalyzer",
+      "type": "ACCOUNT",
+      "status": "ACTIVE"
+    }
+  ],
+  "active_finding": {
+    "id": "finding-abc-123",
+    "resourceType": "AWS::S3::Bucket",
+    "resource": "arn:aws:s3:::my-public-bucket",
+    "isPublic": true,
+    "action": ["s3:GetObject", "s3:ListBucket"],
+    "principal": {"AWS": "*"},
+    "condition": {},
+    "status": "ACTIVE",
+    "analyzedAt": "2026-05-01T10:00:00Z"
+  },
+  "archived_finding": {
+    "id": "finding-def-456",
+    "resourceType": "AWS::IAM::Role",
+    "resource": "arn:aws:iam::123456789012:role/my-role",
+    "isPublic": false,
+    "action": ["sts:AssumeRole"],
+    "principal": {"AWS": "arn:aws:iam::999999999999:root"},
+    "condition": {},
+    "status": "ARCHIVED",
+    "analyzedAt": "2026-04-01T10:00:00Z"
+  }
+}

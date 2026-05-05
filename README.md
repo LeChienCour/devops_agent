@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/diegosandoval/devops_agent/actions/workflows/ci.yml)
 
-> **Build status:** Phases 0–6 complete — repo setup, Terraform infra, LangGraph agent core, 12 AWS tools + MCP wrappers, DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator, demo leak seeding. Phase 7 (talk docs) next.
+> **Build status:** Phases 0–9 complete — repo setup, Terraform infra, LangGraph agent core, 19 AWS tools + MCP wrappers (12 FinOps + 7 Security), DynamoDB persistence, eval harness, Infracost in CI, Slack Block Kit notifications, Markdown report generator, demo leak seeding, talk documentation, CloudWatch metrics + hardening, Security Posture Agent. **Ready for AWS Community Day 2026.**
 
 Autonomous FinOps agent for AWS cost waste detection using LangGraph + Amazon Bedrock.
 
@@ -87,8 +87,9 @@ Guardrails enforced at every loop: max iterations (5), max tokens (50k), Bedrock
 
 ## Features
 
-The agent detects eight categories of AWS cost waste, each producing a structured finding with
-severity, estimated monthly impact in USD, remediation command/IaC, and LLM-generated context.
+### FinOps — Cost Waste Detection (12 tools)
+
+Eight categories of AWS cost waste. Each finding includes severity, estimated monthly impact in USD, remediation command/IaC, and LLM-generated context.
 
 | # | Leak Type                     | Detection Signal                                   | Typical Saving/Month |
 |---|-------------------------------|----------------------------------------------------|----------------------|
@@ -100,6 +101,20 @@ severity, estimated monthly impact in USD, remediation command/IaC, and LLM-gene
 | 6 | Lambda oversized memory       | CloudWatch Insights: max_used / allocated < 40%   | 40–70% of Lambda cost|
 | 7 | Log Groups without retention  | `describe-log-groups` retentionInDays=null         | $0.03 / GB / month   |
 | 8 | Stopped EC2 + attached EBS    | `describe-instances` state=stopped + age > 30 d   | Cost of attached EBS |
+
+### Security Posture (7 tools — Phase 9)
+
+Seven security audit tools. Findings use notional risk USD values so they surface alongside cost findings in the same pipeline.
+
+| # | Check                          | Service              | Detection Signal                           |
+|---|--------------------------------|----------------------|--------------------------------------------|
+| 1 | Active threat findings         | GuardDuty            | HIGH/CRITICAL severity findings            |
+| 2 | Compliance violations          | AWS Config           | Rules with NON_COMPLIANT resources         |
+| 3 | External resource access       | IAM Access Analyzer  | Roles/S3/KMS accessible outside account   |
+| 4 | Aggregated security findings   | Security Hub         | Multi-source HIGH/CRITICAL findings        |
+| 5 | CloudTrail gaps                | CloudTrail           | Trails missing, not logging, no validation |
+| 6 | Open security groups           | EC2                  | 0.0.0.0/0 on SSH (22), RDP (3389), DB ports|
+| 7 | IAM credential hygiene         | IAM                  | Root MFA off, root keys, stale access keys |
 
 ---
 
@@ -122,7 +137,9 @@ severity, estimated monthly impact in USD, remediation command/IaC, and LLM-gene
 
 ---
 
-## Quickstart
+## Quickstart (5 minutes)
+
+> Prerequisites: Python 3.12, Terraform >= 1.6, AWS credentials with Cost Explorer + EC2 + CloudWatch read access, Bedrock model access enabled for `anthropic.claude-sonnet-4-5` in `us-east-1`.
 
 ```bash
 # 1. Clone and install deps
@@ -132,21 +149,38 @@ make install
 
 # 2. Copy and fill env vars
 cp .env.example .env
+# Edit .env: add SLACK_WEBHOOK_URL (optional) and verify AWS region
 
-# 3. Deploy agent infrastructure
-cd infra && terraform init && terraform apply
+# 3. Deploy agent infrastructure (Lambda + DynamoDB + SNS + EventBridge)
+make tf-init && make tf-apply
 
-# 4. (Optional) Seed demo leak resources for testing
+# 4. Build and deploy Lambda package
+make deploy
+
+# 5. (Optional) Seed intentional cost leaks for testing
 make seed-demo
 
-# 5. Run agent locally
-python scripts/run_local.py
+# 6. Trigger an on-demand investigation
+make invoke
+# → prints investigation_id, findings_count, total_savings_usd, bedrock_cost_usd
 
-# 6. Clean up demo leaks
+# 7. Generate a Markdown report from findings
+python scripts/generate_report.py --investigation-id <id-from-step-6>
+
+# 8. Clean up demo leaks
 make cleanup-demo
 ```
 
-> Full step-by-step guide (AWS credentials, SSM secrets, Bedrock access): `docs/SETUP.md` — coming in Phase 7.
+### Demo mode (live demo / recording)
+
+```bash
+make seed-demo     # seed leaks once at the start
+make invoke        # run investigation (repeat for each take)
+make logs          # tail CloudWatch logs in real-time during invoke
+make cleanup-demo  # destroy demo resources at the end
+```
+
+Full live demo script with backup plans: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
 ---
 
@@ -202,6 +236,12 @@ make typecheck     # mypy strict
 make test          # Unit tests only (fast, no AWS calls)
 make test-all      # Full suite with coverage report
 
+# Lambda
+make build         # Build Lambda zip (manylinux2014 wheels, macOS-safe)
+make deploy        # Build + upload Lambda to AWS
+make invoke        # Trigger on-demand investigation
+make logs          # Tail CloudWatch logs (live stream)
+
 # Evals
 python evals/false_positive_rate.py   # Rule-based FP rate against fixtures
 
@@ -216,6 +256,18 @@ make cleanup-demo  # Destroy demo leak resources
 
 > **Infracost** runs automatically on every PR that touches `infra/` — posts a cost diff comment.
 > Requires `INFRACOST_API_KEY` secret in GitHub repo settings (free at [cloud.infracost.io](https://cloud.infracost.io)).
+
+---
+
+## Documentation
+
+| Doc | Purpose |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Extended architecture — Mermaid diagrams, tool registry, data model, security |
+| [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Live demo guide — minute-by-minute script, backup plans, pre-demo checklist |
+| [`docs/COMPARISON.md`](docs/COMPARISON.md) | DIY vs AWS managed tools vs FinOps Agent — cost and capability comparison |
+| [`docs/MCP_USAGE.md`](docs/MCP_USAGE.md) | Using tools interactively via Claude Code CLI + MCP — setup, prompts, troubleshooting |
+| [`docs/ADR/`](docs/ADR/) | Architecture Decision Records (MCP topology, DynamoDB schema, Lambda packaging) |
 
 ---
 
