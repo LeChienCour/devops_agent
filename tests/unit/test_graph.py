@@ -44,6 +44,7 @@ def _make_initial_state(investigation_id: str | None = None) -> AgentState:
         messages=[],
         plan=None,
         gathered_data=[],
+        analyzed_data_count=0,
         findings=[],
         recommendation=None,
         needs_more_data=False,

@@ -19,6 +19,7 @@ def _make_state(**overrides: Any) -> AgentState:
         messages=[],
         plan=None,
         gathered_data=[],
+        analyzed_data_count=0,
         findings=[],
         recommendation=None,
         needs_more_data=False,
@@ -155,17 +156,16 @@ class TestGatherNodePassesRegion:
         plan = _make_plan(["list_unattached_ebs_volumes"])
         state = _make_state(plan=plan)
 
+        mock_config = MagicMock()
+        mock_config.aws_region = "eu-west-1"
+        mock_config.max_iterations = 5
+        mock_config.max_tokens_per_investigation = 50_000
+        mock_config.bedrock_cost_ceiling_usd = 0.50
+
         with (
             patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry),
-            patch("agent.nodes.gather.AgentConfig") as mock_config_cls,
+            patch("agent.nodes.gather.get_config", return_value=mock_config),
         ):
-            mock_config = MagicMock()
-            mock_config.aws_region = "eu-west-1"
-            mock_config.max_iterations = 5
-            mock_config.max_tokens_per_investigation = 50_000
-            mock_config.bedrock_cost_ceiling_usd = 0.50
-            mock_config_cls.return_value = mock_config
-
             from agent.nodes.gather import gather_node
 
             await gather_node(state, MagicMock())
@@ -186,17 +186,16 @@ class TestGatherNodePassesRegion:
         plan = _make_plan(["list_unattached_ebs_volumes", "list_unassociated_eips"])
         state = _make_state(plan=plan)
 
+        mock_config = MagicMock()
+        mock_config.aws_region = "ap-southeast-1"
+        mock_config.max_iterations = 5
+        mock_config.max_tokens_per_investigation = 50_000
+        mock_config.bedrock_cost_ceiling_usd = 0.50
+
         with (
             patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry),
-            patch("agent.nodes.gather.AgentConfig") as mock_config_cls,
+            patch("agent.nodes.gather.get_config", return_value=mock_config),
         ):
-            mock_config = MagicMock()
-            mock_config.aws_region = "ap-southeast-1"
-            mock_config.max_iterations = 5
-            mock_config.max_tokens_per_investigation = 50_000
-            mock_config.bedrock_cost_ceiling_usd = 0.50
-            mock_config_cls.return_value = mock_config
-
             from agent.nodes.gather import gather_node
 
             await gather_node(state, MagicMock())
@@ -262,3 +261,69 @@ class TestGatherNodeGuardrails:
             result = await gather_node(state, MagicMock())
 
         assert result["needs_more_data"] is False
+
+
+# ---------------------------------------------------------------------------
+# Parallel execution
+# ---------------------------------------------------------------------------
+
+
+class TestGatherNodeParallel:
+    """Verify all tools run and per-tool failures don't abort the batch."""
+
+    @pytest.mark.asyncio
+    async def test_gather_node_tools_run_concurrently(self) -> None:
+        """All tools in the plan produce an entry in gathered_data."""
+        fn_a = MagicMock(return_value={"volumes": []})
+        fn_b = MagicMock(return_value={"eips": []})
+        fn_c = MagicMock(return_value={"checks": []})
+        fake_registry = {
+            "list_unattached_ebs_volumes": (MagicMock(), fn_a),
+            "list_unassociated_eips": (MagicMock(), fn_b),
+            "list_cost_optimization_checks": (MagicMock(), fn_c),
+        }
+
+        plan = _make_plan(
+            [
+                "list_unattached_ebs_volumes",
+                "list_unassociated_eips",
+                "list_cost_optimization_checks",
+            ]
+        )
+        state = _make_state(plan=plan)
+
+        with patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry):
+            from agent.nodes.gather import gather_node
+
+            result = await gather_node(state, MagicMock())
+
+        tool_names = {entry["tool"] for entry in result["gathered_data"]}
+        assert tool_names == {
+            "list_unattached_ebs_volumes",
+            "list_unassociated_eips",
+            "list_cost_optimization_checks",
+        }
+        fn_a.assert_called_once()
+        fn_b.assert_called_once()
+        fn_c.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_gather_node_one_tool_fails_others_complete(self) -> None:
+        """A tool that raises an exception is skipped; remaining tools complete."""
+        fn_ok = MagicMock(return_value={"eips": []})
+        fn_fail = MagicMock(side_effect=RuntimeError("AWS throttle"))
+        fake_registry = {
+            "list_unassociated_eips": (MagicMock(), fn_ok),
+            "list_unattached_ebs_volumes": (MagicMock(), fn_fail),
+        }
+
+        plan = _make_plan(["list_unassociated_eips", "list_unattached_ebs_volumes"])
+        state = _make_state(plan=plan)
+
+        with patch("agent.nodes.gather.TOOL_REGISTRY", fake_registry):
+            from agent.nodes.gather import gather_node
+
+            result = await gather_node(state, MagicMock())
+
+        assert len(result["gathered_data"]) == 1
+        assert result["gathered_data"][0]["tool"] == "list_unassociated_eips"

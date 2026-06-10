@@ -7,13 +7,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 
 from agent.guardrails import Guardrails, GuardrailsConfig, GuardrailsViolationError
 from agent.state import AgentState
 from common.bedrock_client import BedrockClient
-from common.config import AgentConfig
+from common.config import get_config
 from common.logger import get_logger
 
 logger = get_logger(__name__)
@@ -31,8 +31,24 @@ def _strip_code_fences(text: str) -> str:
     return cleaned.strip()
 
 
+def _extract_prior_anomalies(messages: list[BaseMessage]) -> list[Any]:
+    """Return anomalies_found from the last AIMessage in the history, or empty list."""
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage):
+            try:
+                payload = json.loads(str(msg.content))
+                return list(payload.get("anomalies_found", []))
+            except (json.JSONDecodeError, AttributeError):
+                pass
+    return []
+
+
 async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:  # noqa: ARG001
     """Invoke Bedrock to detect anomalies in the gathered cost data.
+
+    On first call passes all gathered_data; on subsequent loop iterations passes
+    only new data (delta since last analysis) plus prior anomalies as context,
+    reducing token usage.
 
     Builds the analyze prompt, calls Bedrock, and extracts the
     ``needs_more_data`` flag and ``anomalies_found`` list from the response.
@@ -52,7 +68,7 @@ async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:
     investigation_id: str = state["investigation_id"]
     log = logger.bind(investigation_id=investigation_id, node="analyze")
 
-    agent_config = AgentConfig()
+    agent_config = get_config()
     client = BedrockClient(agent_config)
     guards = Guardrails(
         GuardrailsConfig(
@@ -63,12 +79,18 @@ async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:
     )
 
     gathered_data: list[dict[str, Any]] = state.get("gathered_data", [])
-    gathered_json = json.dumps(gathered_data, indent=2, default=str)
+    analyzed_count: int = state.get("analyzed_data_count", 0)
+    new_data = gathered_data[analyzed_count:]
+
+    prior_anomalies = _extract_prior_anomalies(state.get("messages", []))
+    gathered_json = json.dumps(new_data, indent=2, default=str)
+    prior_json = json.dumps(prior_anomalies, default=str)
 
     system_prompt = _load_prompt("system.md")
     analyze_template = _load_prompt("analyze.md")
     analyze_prompt = analyze_template.format(
         gathered_data=gathered_json,
+        prior_anomalies=prior_json,
         cost_threshold_usd=agent_config.cost_threshold_usd,
     )
 
@@ -106,8 +128,12 @@ async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:
         "analyze_node_complete",
         anomalies_count=len(anomalies),
         needs_more_data=needs_more_data,
+        new_data_items=len(new_data),
         reasoning=analysis.get("reasoning", "")[:120],
     )
+
+    # Advance the delta pointer
+    state["analyzed_data_count"] = len(gathered_data)
 
     # Persist anomalies as an AIMessage so the recommend node can read them
     anomalies_message = AIMessage(content=json.dumps({"anomalies_found": anomalies}))

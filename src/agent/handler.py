@@ -11,11 +11,14 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from agent.graph import build_graph
 from agent.guardrails import GuardrailsState
 from agent.state import AgentState
-from common.config import AgentConfig
+from common.config import get_config
 from common.logger import get_logger
 from common.metrics import MetricsPublisher
 
 logger = get_logger(__name__)
+
+_AGENT_CONFIG = get_config()
+_GRAPH = build_graph(_AGENT_CONFIG)
 
 
 def _build_initial_state(investigation_id: str, trigger: str) -> AgentState:
@@ -34,6 +37,7 @@ def _build_initial_state(investigation_id: str, trigger: str) -> AgentState:
         messages=[],
         plan=None,
         gathered_data=[],
+        analyzed_data_count=0,
         findings=[],
         recommendation=None,
         needs_more_data=False,
@@ -58,13 +62,11 @@ async def _run_investigation(event: dict[str, Any]) -> dict[str, Any]:
     log = logger.bind(investigation_id=investigation_id, trigger=trigger)
     log.info("investigation_started")
 
-    agent_config = AgentConfig()
-    graph = build_graph(agent_config)
     initial_state = _build_initial_state(investigation_id, trigger)
 
     final_state: AgentState = await asyncio.wait_for(
-        graph.ainvoke(initial_state),  # type: ignore[arg-type]
-        timeout=agent_config.investigation_timeout_sec,
+        _GRAPH.ainvoke(initial_state),  # type: ignore[arg-type]
+        timeout=_AGENT_CONFIG.investigation_timeout_sec,
     )
 
     recommendation = final_state.get("recommendation")
@@ -82,7 +84,7 @@ async def _run_investigation(event: dict[str, Any]) -> dict[str, Any]:
         guardrail_violations=len(guardrails.violations),
     )
 
-    MetricsPublisher(agent_config).record_investigation(
+    MetricsPublisher(_AGENT_CONFIG).record_investigation(
         investigation_id=investigation_id,
         findings_count=findings_count,
         total_savings_usd=total_savings,
