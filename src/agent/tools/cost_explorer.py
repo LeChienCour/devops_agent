@@ -7,8 +7,9 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import boto3
 from aws_lambda_powertools import Logger
+
+from common.aws_clients import get_client
 
 logger = Logger(service="finops-agent")
 
@@ -105,7 +106,7 @@ def get_cost_by_service(
     Returns:
         Dict with ResultsByTime from Cost Explorer API.
     """
-    client = boto3.client("ce", region_name=region)
+    client = get_client("ce", region)
     response = client.get_cost_and_usage(
         TimePeriod={"Start": start_date, "End": end_date},
         Granularity=granularity,
@@ -134,7 +135,7 @@ def get_cost_anomalies(
 
     end = date.today()
     start = end - timedelta(days=lookback_days)
-    client = boto3.client("ce", region_name=region)
+    client = get_client("ce", region)
     response = client.get_anomalies(
         DateInterval={
             "StartDate": start.isoformat(),
@@ -160,7 +161,7 @@ def get_cost_forecast(
     Returns:
         Dict with forecast Total and ResultsByTime.
     """
-    client = boto3.client("ce", region_name=region)
+    client = get_client("ce", region)
     response = client.get_cost_forecast(
         TimePeriod={"Start": start_date, "End": end_date},
         Metric="UNBLENDED_COST",
