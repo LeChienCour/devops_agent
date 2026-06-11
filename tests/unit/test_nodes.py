@@ -41,6 +41,7 @@ def _make_state(**overrides: Any) -> AgentState:
         messages=[],
         plan=None,
         gathered_data=[],
+        analyzed_data_count=0,
         findings=[],
         recommendation=None,
         needs_more_data=False,
@@ -340,6 +341,62 @@ class TestAnalyzeNode:
             result = await analyze_node(state, MagicMock())
 
         assert result["needs_more_data"] is False
+
+    @pytest.mark.asyncio
+    async def test_analyze_node_second_iteration_sends_only_new_data(self) -> None:
+        """Second loop iteration passes only data beyond analyzed_data_count."""
+        analysis = {
+            "anomalies_found": [],
+            "needs_more_data": False,
+            "additional_tools_needed": [],
+            "reasoning": "No anomalies.",
+        }
+        mock_response = _make_bedrock_response(json.dumps(analysis))
+
+        already_analyzed = {"tool": "get_cost_by_service", "data": {"sentinel_prior_xq7": True}}
+        new_item = {"tool": "list_stopped_instances", "data": {"sentinel_new_xq7": True}}
+
+        with patch("agent.nodes.analyze.BedrockClient") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.invoke.return_value = mock_response
+            mock_client_cls.return_value = mock_client
+
+            state = _make_state(
+                gathered_data=[already_analyzed, new_item],
+                analyzed_data_count=1,
+            )
+            await analyze_node(state, MagicMock())
+
+        call_args = mock_client.invoke.call_args
+        human_msg = call_args[0][0][1]  # messages list, second element = HumanMessage
+        assert "sentinel_new_xq7" in human_msg.content
+        assert "sentinel_prior_xq7" not in human_msg.content
+
+    @pytest.mark.asyncio
+    async def test_analyze_node_updates_analyzed_data_count(self) -> None:
+        """analyzed_data_count advances to len(gathered_data) after analysis."""
+        analysis = {
+            "anomalies_found": [],
+            "needs_more_data": False,
+            "additional_tools_needed": [],
+            "reasoning": "Clean.",
+        }
+        mock_response = _make_bedrock_response(json.dumps(analysis))
+
+        items = [
+            {"tool": "get_cost_by_service", "data": {}},
+            {"tool": "list_stopped_instances", "data": {}},
+        ]
+
+        with patch("agent.nodes.analyze.BedrockClient") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.invoke.return_value = mock_response
+            mock_client_cls.return_value = mock_client
+
+            state = _make_state(gathered_data=items)
+            result = await analyze_node(state, MagicMock())
+
+        assert result["analyzed_data_count"] == 2
 
 
 # ---------------------------------------------------------------------------

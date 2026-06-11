@@ -2,10 +2,16 @@
 
 You are analysing raw AWS cost data collected by the FinOps agent tools.
 
-## Gathered Data
+## New Gathered Data
 
 ```json
 {gathered_data}
+```
+
+## Previously Identified Anomalies (prior iterations)
+
+```json
+{prior_anomalies}
 ```
 
 ## Cost Threshold

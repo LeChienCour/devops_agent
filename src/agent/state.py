@@ -23,6 +23,8 @@ class AgentState(TypedDict):
         messages: LangChain message history for the Bedrock conversation.
         plan: Structured plan produced by the plan node; None until set.
         gathered_data: Raw tool responses accumulated by gather nodes.
+        analyzed_data_count: Number of gathered_data elements already sent to Bedrock;
+            used to pass only new data (delta) on subsequent loop iterations.
         findings: Validated Finding objects produced by the recommend node.
         recommendation: Final Recommendation object; None until recommend node runs.
         needs_more_data: When True the graph loops back to gather; set by analyze node.
@@ -35,6 +37,7 @@ class AgentState(TypedDict):
     messages: list[BaseMessage]
     plan: dict[str, Any] | None
     gathered_data: list[dict[str, Any]]
+    analyzed_data_count: int
     findings: list[Finding]
     recommendation: Recommendation | None
     needs_more_data: bool

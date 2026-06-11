@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -61,3 +63,9 @@ class AgentConfig(BaseSettings):
         default=0.50,
         description="Max estimated Bedrock spend per investigation in USD",
     )
+
+
+@lru_cache(maxsize=1)
+def get_config() -> AgentConfig:
+    """Return the singleton AgentConfig instance (cached after first call)."""
+    return AgentConfig()
