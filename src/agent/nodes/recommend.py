@@ -88,7 +88,7 @@ async def recommend_node(state: AgentState, config: RunnableConfig) -> AgentStat
         )
         return state
 
-    client = BedrockClient(agent_config)
+    client = BedrockClient(agent_config, model_id=state.get("model_id"))
     guards = Guardrails(
         GuardrailsConfig(
             max_iterations=agent_config.max_iterations,

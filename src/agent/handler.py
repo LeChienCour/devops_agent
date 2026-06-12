@@ -21,12 +21,15 @@ _AGENT_CONFIG = get_config()
 _GRAPH = build_graph(_AGENT_CONFIG)
 
 
-def _build_initial_state(investigation_id: str, trigger: str) -> AgentState:
+def _build_initial_state(
+    investigation_id: str, trigger: str, model_id: str | None = None
+) -> AgentState:
     """Construct the initial AgentState for a new investigation.
 
     Args:
         investigation_id: UUID4 string for this run.
         trigger: Source of the investigation — "scheduled" or "on_demand".
+        model_id: Optional Bedrock model ID override for this run.
 
     Returns:
         A freshly initialised AgentState TypedDict.
@@ -34,6 +37,7 @@ def _build_initial_state(investigation_id: str, trigger: str) -> AgentState:
     return AgentState(
         investigation_id=investigation_id,
         trigger=trigger,
+        model_id=model_id,
         messages=[],
         plan=None,
         gathered_data=[],
@@ -41,7 +45,7 @@ def _build_initial_state(investigation_id: str, trigger: str) -> AgentState:
         findings=[],
         recommendation=None,
         needs_more_data=False,
-        guardrails=GuardrailsState(),
+        guardrails=GuardrailsState(model_id=model_id or _AGENT_CONFIG.bedrock_model_id),
         error=None,
     )
 
@@ -56,13 +60,16 @@ async def _run_investigation(event: dict[str, Any]) -> dict[str, Any]:
         Result dict with investigation_id, findings_count, total_savings_usd,
         bedrock_cost_usd, and optional error fields.
     """
-    trigger: str = str(event.get("trigger", "scheduled"))
+    detail: dict[str, Any] = event.get("detail") or {}
+    trigger: str = str(event.get("trigger") or detail.get("trigger") or "scheduled")
+    model_id_raw = event.get("model_id") or detail.get("model_id")
+    model_id: str | None = str(model_id_raw) if model_id_raw else None
     investigation_id = str(uuid.uuid4())
 
     log = logger.bind(investigation_id=investigation_id, trigger=trigger)
-    log.info("investigation_started")
+    log.info("investigation_started", model_id=model_id or _AGENT_CONFIG.bedrock_model_id)
 
-    initial_state = _build_initial_state(investigation_id, trigger)
+    initial_state = _build_initial_state(investigation_id, trigger, model_id)
 
     final_state: AgentState = await asyncio.wait_for(
         _GRAPH.ainvoke(initial_state),  # type: ignore[arg-type]

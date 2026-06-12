@@ -16,6 +16,7 @@ def _make_state(**overrides: Any) -> AgentState:
     base: AgentState = AgentState(
         investigation_id="test-gather-001",
         trigger="on_demand",
+        model_id=None,
         messages=[],
         plan=None,
         gathered_data=[],

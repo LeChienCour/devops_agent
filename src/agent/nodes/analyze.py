@@ -69,7 +69,7 @@ async def analyze_node(state: AgentState, config: RunnableConfig) -> AgentState:
     log = logger.bind(investigation_id=investigation_id, node="analyze")
 
     agent_config = get_config()
-    client = BedrockClient(agent_config)
+    client = BedrockClient(agent_config, model_id=state.get("model_id"))
     guards = Guardrails(
         GuardrailsConfig(
             max_iterations=agent_config.max_iterations,
