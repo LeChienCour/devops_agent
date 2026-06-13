@@ -13,6 +13,24 @@ DEFAULT_MAX_ITERATIONS = 5
 DEFAULT_MAX_TOKENS_PER_INVESTIGATION = 50_000
 DEFAULT_BEDROCK_COST_CEILING_USD = 0.50
 
+# Approximate Bedrock pricing per 1K tokens (input, output) in us-east-1.
+# Keyed by substring of the Bedrock model ID (IDs carry an "anthropic." prefix
+# and a date/version suffix). Update if pricing changes:
+# https://aws.amazon.com/bedrock/pricing/
+_MODEL_PRICING_PER_1K: dict[str, tuple[float, float]] = {
+    "claude-sonnet-4-5": (0.003, 0.015),
+    "claude-haiku-4-5": (0.001, 0.005),
+}
+_DEFAULT_PRICING_PER_1K: tuple[float, float] = (0.003, 0.015)
+
+
+def _pricing_for_model(model_id: str) -> tuple[float, float]:
+    """Return (input, output) cost per 1K tokens for a Bedrock model ID."""
+    for key, pricing in _MODEL_PRICING_PER_1K.items():
+        if key in model_id:
+            return pricing
+    return _DEFAULT_PRICING_PER_1K
+
 
 @dataclass
 class GuardrailsConfig:
@@ -25,25 +43,26 @@ class GuardrailsConfig:
 
 @dataclass
 class GuardrailsState:
-    """Mutable counters tracked during a single investigation run."""
+    """Mutable counters tracked during a single investigation run.
+
+    ``model_id`` selects the pricing table used for cost estimation; an empty
+    string falls back to Sonnet pricing.
+    """
 
     iterations: int = 0
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     estimated_cost_usd: float = 0.0
     violations: list[str] = field(default_factory=list)
-
-    # Approximate Bedrock Claude Sonnet 4.5 pricing (us-east-1)
-    # Update if pricing changes: https://aws.amazon.com/bedrock/pricing/
-    _INPUT_COST_PER_1K = 0.003
-    _OUTPUT_COST_PER_1K = 0.015
+    model_id: str = ""
 
     def record_llm_call(self, input_tokens: int, output_tokens: int) -> None:
         """Update token counters and estimated cost after a Bedrock call."""
+        input_cost_per_1k, output_cost_per_1k = _pricing_for_model(self.model_id)
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
-        self.estimated_cost_usd += (input_tokens / 1000) * self._INPUT_COST_PER_1K
-        self.estimated_cost_usd += (output_tokens / 1000) * self._OUTPUT_COST_PER_1K
+        self.estimated_cost_usd += (input_tokens / 1000) * input_cost_per_1k
+        self.estimated_cost_usd += (output_tokens / 1000) * output_cost_per_1k
 
     def increment_iteration(self) -> None:
         """Increment the gather→analyze loop counter."""

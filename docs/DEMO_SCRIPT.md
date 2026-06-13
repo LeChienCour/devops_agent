@@ -266,7 +266,6 @@ aws dynamodb query \
 ```bash
 # En Lambda (via Terraform outputs o SSM)
 DYNAMODB_TABLE_NAME=finops-agent-findings-dev
-SNS_TOPIC_ARN=arn:aws:sns:us-east-1:ACCOUNT:finops-agent-alerts-dev
 BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
 AWS_REGION_NAME=us-east-1
 COST_THRESHOLD_USD=5.0

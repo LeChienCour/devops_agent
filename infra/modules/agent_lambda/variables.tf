@@ -28,11 +28,6 @@ variable "dynamodb_table_gsi_arn" {
   type        = string
 }
 
-variable "sns_topic_arn" {
-  description = "ARN of the SNS alerts topic. Injected as Lambda environment variable and used in IAM policy."
-  type        = string
-}
-
 variable "bedrock_model_id" {
   description = "Amazon Bedrock model ID passed to the agent runtime."
   type        = string

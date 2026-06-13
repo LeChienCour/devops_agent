@@ -182,6 +182,29 @@ make cleanup-demo  # destroy demo resources at the end
 
 Full live demo script with backup plans: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
+### Stage 2: applying remediations
+
+The agent is **read-only** — it never deletes, stops, or resizes resources itself
+(see `CLAUDE.md` IAM policy). Each `Finding` carries a `remediation_command`
+field with the exact CLI/IaC fix, surfaced in:
+
+- The Slack notification (per finding)
+- `python scripts/generate_report.py --investigation-id <id>` (Markdown report)
+- The `finding#<uuid>` items in DynamoDB
+
+To "reduce" costs, review the suggested commands and run them manually, e.g.:
+
+```bash
+# Example: release an unassociated Elastic IP flagged by a finding
+aws ec2 release-address --allocation-id eipalloc-xxxxxxxx
+```
+
+For the demo lab, `make cleanup-demo` removes all seeded leak resources at once
+instead of applying remediations individually.
+
+Automated remediation with Slack approval is tracked as a future extension
+(see `PLAN.md`), not yet implemented.
+
 ---
 
 ## Project Structure

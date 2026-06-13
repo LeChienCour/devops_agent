@@ -33,12 +33,6 @@ class AgentConfig(BaseSettings):
         description="DynamoDB table for persisting findings",
     )
 
-    # SNS
-    sns_topic_arn: str = Field(
-        default="",
-        description="SNS topic ARN for Slack notifications",
-    )
-
     # Agent behavior
     log_level: str = Field(default="INFO", description="Structlog level")
     cost_threshold_usd: float = Field(

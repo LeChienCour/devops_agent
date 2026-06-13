@@ -6,35 +6,22 @@
 # or CI/CD pipelines.
 #
 # TO ENABLE THE S3 REMOTE BACKEND:
-#   1. Create an S3 bucket:
-#        aws s3api create-bucket --bucket <your-bucket-name> --region us-east-1
-#        aws s3api put-bucket-versioning \
-#          --bucket <your-bucket-name> \
-#          --versioning-configuration Status=Enabled
-#   2. Create a DynamoDB table for state locking:
-#        aws dynamodb create-table \
-#          --table-name terraform-state-lock \
-#          --attribute-definitions AttributeName=LockID,AttributeType=S \
-#          --key-schema AttributeName=LockID,KeyType=HASH \
-#          --billing-mode PAY_PER_REQUEST
-#   3. Uncomment the block below and fill in your values.
-#   4. Run: terraform init -reconfigure
+#   1. Run `make tf-bootstrap-apply` (infra/bootstrap/) to create the S3
+#      state bucket — versioned, encrypted, private.
+#   2. Uncomment the block below and fill in your values (the bootstrap's
+#      `backend_config_snippet` output has the exact values to paste).
+#   3. Run: terraform init -reconfigure
 #
+# State locking uses S3's native lock file (use_lockfile, Terraform >= 1.10)
+# — no DynamoDB table required.
 # ---------------------------------------------------------------------------
 
-# terraform {
-#   backend "s3" {
-#     bucket         = "finops-agent-terraform-state-<account_id>"
-#     key            = "infra/terraform.tfstate"
-#     region         = "us-east-1"
-#     encrypt        = true
-#     dynamodb_table = "terraform-state-lock"
-#   }
-# }
-
-# ---------------------------------------------------------------------------
-# LOCAL BACKEND (default — remove this comment block when switching to S3)
-# ---------------------------------------------------------------------------
 terraform {
-  backend "local" {}
+  backend "s3" {
+    bucket       = "finops-agent-terraform-state-187711854492"
+    key          = "infra/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }

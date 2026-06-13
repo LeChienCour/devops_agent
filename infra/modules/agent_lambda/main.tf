@@ -153,7 +153,6 @@ resource "aws_lambda_function" "agent" {
   environment {
     variables = {
       DYNAMODB_TABLE_NAME       = var.dynamodb_table_name
-      SNS_TOPIC_ARN             = var.sns_topic_arn
       BEDROCK_MODEL_ID          = var.bedrock_model_id
       LOG_LEVEL                 = var.log_level
       AWS_REGION_NAME           = var.aws_region # AWS_REGION is reserved by Lambda runtime

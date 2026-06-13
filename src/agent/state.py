@@ -30,10 +30,12 @@ class AgentState(TypedDict):
         needs_more_data: When True the graph loops back to gather; set by analyze node.
         guardrails: Mutable counters and violation log enforced across nodes.
         error: Set to a non-None string when a node encounters an unrecoverable error.
+        model_id: Optional per-invocation Bedrock model ID override; None uses config.
     """
 
     investigation_id: str
     trigger: str
+    model_id: str | None
     messages: list[BaseMessage]
     plan: dict[str, Any] | None
     gathered_data: list[dict[str, Any]]

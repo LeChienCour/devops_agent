@@ -62,13 +62,14 @@ class BedrockClient:
 
     Args:
         config: Runtime configuration containing model ID, region, etc.
+        model_id: Optional per-invocation override of ``config.bedrock_model_id``.
     """
 
-    def __init__(self, config: AgentConfig) -> None:
-        self._model_id = config.bedrock_model_id
+    def __init__(self, config: AgentConfig, model_id: str | None = None) -> None:
+        self._model_id = model_id or config.bedrock_model_id
         self._region = config.aws_region
         self._llm = ChatBedrockConverse(
-            model=config.bedrock_model_id,
+            model=self._model_id,
             region_name=config.aws_region,
         )
 

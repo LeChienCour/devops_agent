@@ -41,6 +41,7 @@ def _make_initial_state(investigation_id: str | None = None) -> AgentState:
     return AgentState(
         investigation_id=investigation_id or str(uuid.uuid4()),
         trigger="on_demand",
+        model_id=None,
         messages=[],
         plan=None,
         gathered_data=[],

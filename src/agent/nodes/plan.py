@@ -79,7 +79,7 @@ async def plan_node(state: AgentState, config: RunnableConfig) -> AgentState:  #
     log = logger.bind(investigation_id=investigation_id, node="plan")
 
     agent_config = AgentConfig()
-    client = BedrockClient(agent_config)
+    client = BedrockClient(agent_config, model_id=state.get("model_id"))
 
     system_prompt = _load_prompt("system.md")
     plan_template = _load_prompt("plan.md")
