@@ -24,18 +24,6 @@ module "storage" {
 }
 
 # ---------------------------------------------------------------------------
-# Notifications: SNS topic + optional Slack subscription
-# ---------------------------------------------------------------------------
-module "notifications" {
-  source = "./modules/notifications"
-
-  project_name      = var.project_name
-  environment       = var.environment
-  slack_webhook_url = var.slack_webhook_url
-  tags              = local.common_tags
-}
-
-# ---------------------------------------------------------------------------
 # Agent Lambda: function, IAM role, DLQ, log group
 # ---------------------------------------------------------------------------
 module "agent_lambda" {
@@ -47,7 +35,6 @@ module "agent_lambda" {
   dynamodb_table_name       = module.storage.dynamodb_table_name
   dynamodb_table_arn        = module.storage.dynamodb_table_arn
   dynamodb_table_gsi_arn    = module.storage.dynamodb_table_gsi_arn
-  sns_topic_arn             = module.notifications.sns_topic_arn
   bedrock_model_id          = var.bedrock_model_id
   lambda_memory_mb          = var.lambda_memory_mb
   lambda_timeout_sec        = var.lambda_timeout_sec

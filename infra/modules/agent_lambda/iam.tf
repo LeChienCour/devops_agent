@@ -205,21 +205,6 @@ data "aws_iam_policy_document" "dynamodb_write" {
 }
 
 # ---------------------------------------------------------------------------
-# Policy document: SNS (publish alerts)
-# ---------------------------------------------------------------------------
-data "aws_iam_policy_document" "sns_publish" {
-  statement {
-    sid    = "SNSPublishAlerts"
-    effect = "Allow"
-
-    actions = ["sns:Publish"]
-
-    # Scoped to the specific alerts topic only
-    resources = [var.sns_topic_arn]
-  }
-}
-
-# ---------------------------------------------------------------------------
 # Policy document: SSM Parameter Store (read agent config / secrets)
 # ---------------------------------------------------------------------------
 data "aws_iam_policy_document" "ssm_read" {
@@ -390,7 +375,6 @@ data "aws_iam_policy_document" "lambda_combined" {
     data.aws_iam_policy_document.bedrock_invoke.json,
     data.aws_iam_policy_document.lambda_logging.json,
     data.aws_iam_policy_document.dynamodb_write.json,
-    data.aws_iam_policy_document.sns_publish.json,
     data.aws_iam_policy_document.ssm_read.json,
     data.aws_iam_policy_document.sqs_dlq.json,
     data.aws_iam_policy_document.guardduty_read.json,

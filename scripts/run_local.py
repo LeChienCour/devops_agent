@@ -10,7 +10,6 @@ Requires a ``.env`` file at the repository root with at minimum::
     AWS_REGION=us-east-1
     BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
     DYNAMODB_TABLE_NAME=finops-agent-findings
-    SNS_TOPIC_ARN=arn:aws:sns:us-east-1:000000000000:finops-alerts
     IS_LOCAL=true
 """
 

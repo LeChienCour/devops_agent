@@ -33,16 +33,6 @@ variable "tags" {
 }
 
 # ---------------------------------------------------------------------------
-# Notification variables (passed down to the notifications module)
-# ---------------------------------------------------------------------------
-variable "slack_webhook_url" {
-  description = "Slack incoming webhook URL for cost-alert notifications. Leave empty to skip subscription creation."
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-# ---------------------------------------------------------------------------
 # Lambda tuning (optional overrides)
 # ---------------------------------------------------------------------------
 variable "lambda_memory_mb" {

@@ -23,11 +23,6 @@ output "dynamodb_table_arn" {
   value       = module.storage.dynamodb_table_arn
 }
 
-output "sns_topic_arn" {
-  description = "ARN of the SNS alert topic."
-  value       = module.notifications.sns_topic_arn
-}
-
 output "eventbridge_rule_arn_weekly" {
   description = "ARN of the weekly EventBridge schedule rule."
   value       = module.eventbridge.eventbridge_rule_arn_weekly
