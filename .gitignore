@@ -100,3 +100,7 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# bootstrap/ is throwaway: tiny (1 S3 bucket), state stays local and is
+# re-importable if lost — no need to pin provider versions for it.
+infra/bootstrap/.terraform.lock.hcl

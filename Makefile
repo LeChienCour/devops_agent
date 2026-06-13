@@ -75,9 +75,28 @@ clean: ## Remove all generated/cache artifacts
 # ---------------------------------------------------------------------------
 # Infrastructure (Terraform)
 # ---------------------------------------------------------------------------
-TF_DIR      := infra
-DEMO_DIR    := infra/demo
+TF_DIR        := infra
+DEMO_DIR      := infra/demo
+BOOTSTRAP_DIR := infra/bootstrap
 TF_VARS     ?=                          # e.g. TF_VARS="-var='environment=prod'"
+
+.PHONY: tf-bootstrap-init
+tf-bootstrap-init: ## Init Terraform (state backend bootstrap)
+	terraform -chdir=$(BOOTSTRAP_DIR) init
+
+.PHONY: tf-bootstrap-plan
+tf-bootstrap-plan: ## Plan state backend bootstrap (S3 bucket + DynamoDB lock table)
+	terraform -chdir=$(BOOTSTRAP_DIR) plan
+
+.PHONY: tf-bootstrap-apply
+tf-bootstrap-apply: ## Create the S3 state bucket + DynamoDB lock table (run once, before enabling the S3 backend)
+	@if [ "$(TF_AUTO_APPROVE)" = "1" ]; then \
+		terraform -chdir=$(BOOTSTRAP_DIR) apply -auto-approve; \
+	else \
+		terraform -chdir=$(BOOTSTRAP_DIR) apply; \
+	fi
+	@echo ""
+	@echo "Paste the backend_config_snippet output into infra/backend.tf, then run 'make tf-init' with -reconfigure."
 
 .PHONY: tf-init
 tf-init: ## Init Terraform (agent infra)
